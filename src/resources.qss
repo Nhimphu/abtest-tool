@@ -1,0 +1,45 @@
+/* resources.qss */
+
+QWidget {
+    font-family: Segoe UI, sans-serif;
+    font-size: 11pt;
+}
+
+QPushButton {
+    padding: 5px;
+    border: 1px solid #888;
+    border-radius: 4px;
+}
+
+QPushButton:hover {
+    background-color: #d0d0d0;
+}
+
+QLineEdit {
+    padding: 3px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+}
+
+QComboBox {
+    padding: 3px;
+    border: 1px solid #aaa;
+    border-radius: 3px;
+}
+
+QTableWidget {
+    gridline-color: #ccc;
+    selection-background-color: #87cefa;
+}
+
+QMenuBar {
+    background-color: #f0f0f0;
+}
+
+QMenu {
+    background-color: #f0f0f0;
+}
+
+QMenu::item:selected {
+    background-color: #d0d0d0;
+}
