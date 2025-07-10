@@ -151,15 +151,19 @@ def plot_bayesian_posterior(alpha_prior, beta_prior, users_a, conv_a, users_b, c
 
 def run_aa_simulation(baseline, total_users, alpha, num_sim=1000):
     """A/A симуляция, возвращает фактический FPR."""
-    false = 0
-    for _ in range(num_sim):
-        ua = total_users // 2
-        ub = total_users - ua
-        ca = np.random.binomial(ua, baseline)
-        cb = np.random.binomial(ub, baseline)
-        if evaluate_abn_test(ua, ca, ub, cb, alpha=alpha)['significant_ab']:
-            false += 1
-    return false / num_sim
+    ua = total_users // 2
+    ub = total_users - ua
+
+    ca = np.random.binomial(ua, baseline, size=num_sim)
+    cb = np.random.binomial(ub, baseline, size=num_sim)
+
+    cr_a = ca / ua
+    cr_b = cb / ub
+    pooled = (ca + cb) / (ua + ub)
+    se = np.sqrt(pooled * (1 - pooled) * (1 / ua + 1 / ub))
+    z = np.divide(cr_b - cr_a, se, out=np.zeros_like(cr_a, dtype=float), where=se > 0)
+    p_vals = 2 * (1 - norm.cdf(np.abs(z)))
+    return float(np.mean(p_vals < alpha))
 
 def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
     """
@@ -251,13 +255,11 @@ def plot_bootstrap_distribution(users_a, conv_a, users_b, conv_b, iterations=500
     """
     Возвращает Plotly-гистограмму бутстрап-разницы (B−A).
     """
-    data_a = np.array([1]*conv_a + [0]*(users_a-conv_a))
-    data_b = np.array([1]*conv_b + [0]*(users_b-conv_b))
-    diffs = [
-        np.mean(np.random.choice(data_b, users_b, True))
-        - np.mean(np.random.choice(data_a, users_a, True))
-        for _ in range(iterations)
-    ]
+    cr_a = conv_a / users_a
+    cr_b = conv_b / users_b
+    samp_a = np.random.binomial(users_a, cr_a, size=iterations) / users_a
+    samp_b = np.random.binomial(users_b, cr_b, size=iterations) / users_b
+    diffs = samp_b - samp_a
 
     fig = go.Figure()
     fig.add_trace(go.Histogram(
