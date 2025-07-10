@@ -21,11 +21,11 @@ from PyQt6.QtWidgets import (
     QTableWidget,
     QTableWidgetItem,
     QMessageBox,
-    QFileDialog
+    QFileDialog,
+    QTextBrowser,
 )
 from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
 from PyQt6.QtCore import Qt, QDateTime
-from PyQt6.QtWebEngineWidgets import QWebEngineView
 
 from logic import (
     required_sample_size,
@@ -48,21 +48,22 @@ def show_error(parent, msg):
     QMessageBox.critical(parent, "Ошибка", msg)
 
 
-class PlotWindow(QMainWindow):
-    """
-    Окно для отображения интерактивных Plotly-графиков через QWebEngineView.
-    """
+class PlotWindow:
+    """Utility for displaying Plotly figures in the user's browser."""
+
     def __init__(self, parent=None):
-        super().__init__(parent)
-        self.setWindowTitle("Visualization")
-        self.resize(900, 600)
-        self.view = QWebEngineView(self)
-        self.setCentralWidget(self.view)
-        self.show()
+        self.parent = parent
 
     def display_plot(self, fig):
-        html = fig.to_html(full_html=False, include_plotlyjs='cdn')
-        self.view.setHtml(html)
+        import tempfile
+        import webbrowser
+        import plotly.io as pio
+
+        html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".html") as f:
+            f.write(html)
+            path = f.name
+        webbrowser.open(f"file://{path}")
 
 
 class ABTestWindow(QMainWindow):
@@ -338,7 +339,7 @@ class ABTestWindow(QMainWindow):
         self.save_plot_button.clicked.connect(save_plot)
 
         # Результаты
-        self.results_text = QWebEngineView()
+        self.results_text = QTextBrowser()
 
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
