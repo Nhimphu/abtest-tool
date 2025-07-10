@@ -1,6 +1,7 @@
 # utils.py
 from PyQt6.QtWidgets import QMessageBox
 import json
+import csv
 import pandas as pd
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas as pdfcanvas
@@ -52,6 +53,17 @@ def export_excel(sections, filepath):
             rows = [line.strip().split(":") for line in lines if ":" in line]
             df = pd.DataFrame(rows, columns=["Metric", "Value"])
             df.to_excel(writer, sheet_name=name[:31], index=False)
+
+def export_csv(sections, filepath):
+    with open(filepath, 'w', newline='', encoding='utf-8') as f:
+        w = csv.writer(f)
+        for name, lines in sections.items():
+            w.writerow([name])
+            for line in lines:
+                if ':' in line:
+                    metric, value = [p.strip() for p in line.split(':', 1)]
+                    w.writerow([metric, value])
+            w.writerow([])
 
 def show_error(parent, message):
     QMessageBox.critical(parent, "Ошибка", message)

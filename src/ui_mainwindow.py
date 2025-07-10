@@ -105,7 +105,8 @@ class ABTestWindow(QMainWindow):
                 'save_session': "Сохранить сессию",
                 'load_session': "Загрузить сессию",
                 'export_pdf': "Экспорт PDF",
-                'export_excel': "Экспорт Excel"
+                'export_excel': "Экспорт Excel",
+                'export_csv': "Экспорт CSV"
             },
             'EN': {
                 'title': "Ultimate A/B Testing Tool",
@@ -140,7 +141,8 @@ class ABTestWindow(QMainWindow):
                 'save_session': "Save session",
                 'load_session': "Load session",
                 'export_pdf': "Export PDF",
-                'export_excel': "Export Excel"
+                'export_excel': "Export Excel",
+                'export_csv': "Export CSV"
             }
         }
 
@@ -474,6 +476,9 @@ class ABTestWindow(QMainWindow):
         a4 = QAction(L['export_excel'], self)
         a4.triggered.connect(self.export_excel)
         fm.addAction(a4)
+        a5 = QAction(L['export_csv'], self)
+        a5.triggered.connect(self.export_csv)
+        fm.addAction(a5)
 
         # Tutorial / Справка
         hm = mb.addMenu(L['tutorial'])
@@ -724,6 +729,19 @@ class ABTestWindow(QMainWindow):
         try:
             sections = {"Results": self.results_text.toPlainText().splitlines()}
             utils.export_excel(sections, path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
+
+    def export_csv(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save CSV", "", "CSV Files (*.csv)"
+        )
+        if not path:
+            return
+        try:
+            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            utils.export_csv(sections, path)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
