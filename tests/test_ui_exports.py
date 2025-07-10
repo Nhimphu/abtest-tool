@@ -135,3 +135,14 @@ def test_export_excel_invokes_util(monkeypatch):
     ABTestWindow.export_excel(dummy)
 
     assert recorded.get('args') == ({'Results': ['line1', 'line2']}, 'out.xlsx')
+
+
+def test_export_csv_invokes_util(monkeypatch):
+    recorded = {}
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *a, **k: ('out.csv', ''))
+    monkeypatch.setattr(utils, 'export_csv', lambda sec, path: recorded.setdefault('args', (sec, path)))
+
+    dummy = types.SimpleNamespace(results_text=types.SimpleNamespace(toPlainText=lambda: 'line1\nline2'))
+    ABTestWindow.export_csv(dummy)
+
+    assert recorded.get('args') == ({'Results': ['line1', 'line2']}, 'out.csv')
