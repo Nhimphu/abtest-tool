@@ -93,7 +93,7 @@ class ABTestWindow(QMainWindow):
                 'pre_exp_data': "Загр. пред. данные",
                 'clear_results': "Очистить",
                 'save_plot': "Сохранить график",
-                'power_curve': "Кривая мощности",
+                'power_curve': "Кривая размера выборки",
                 'bootstrap': "Бутстрап",
                 'export_hist_csv': "Экспорт истории CSV",
                 'export_hist_xl': "Экспорт истории Excel",
@@ -128,7 +128,7 @@ class ABTestWindow(QMainWindow):
                 'pre_exp_data': "Load Pre-exp",
                 'clear_results': "Clear",
                 'save_plot': "Save Plot",
-                'power_curve': "Power Curve",
+                'power_curve': "Sample Size Curve",
                 'bootstrap': "Bootstrap",
                 'export_hist_csv': "Export history CSV",
                 'export_hist_xl': "Export history Excel",
@@ -569,7 +569,7 @@ class ABTestWindow(QMainWindow):
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
             alpha  = self.alpha_slider.value()/100
-            res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha)
+            res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
             html   = (f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
                       f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
                       f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"

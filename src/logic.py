@@ -14,7 +14,10 @@ def required_sample_size(p1, p2, alpha, power):
     se_pooled = math.sqrt(2 * p_avg * (1 - p_avg))
     se_effect = math.sqrt(p1*(1-p1) + p2*(1-p2))
     n = ((z_alpha*se_pooled + z_beta*se_effect)**2)/((p1 - p2)**2)
-    return max(1, math.ceil(n/2))
+    # n already represents the sample size required per group.
+    # Returning ``n/2`` underestimates the needed observations and
+    # leads to underpowered experiments.
+    return max(1, math.ceil(n))
 
 def calculate_mde(sample_size, alpha, power, p1):
     """Минимальная обнаруживаемая разница при данных sample_size."""
@@ -25,47 +28,79 @@ def calculate_mde(sample_size, alpha, power, p1):
     se = math.sqrt(2 * p1 * (1 - p1) / sample_size)
     return (z_alpha + z_beta) * se
 
-def evaluate_abn_test(users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=0.05):
-    """
-    A/B/n z-тест с поправкой Бонферрони.
-    Возвращает dict с ключами:
-      cr_a, cr_b, cr_c,
-      uplift_ab, uplift_ac,
-      p_value_ab, p_value_ac,
-      significant_ab, significant_ac,
-      winner, cohens_h_ab, cohens_h_ac.
-    """
-    if not all(x > 0 for x in [users_a, users_b, users_c]):
+def evaluate_abn_test(
+    users_a,
+    conv_a,
+    users_b,
+    conv_b,
+    users_c=None,
+    conv_c=None,
+    alpha=0.05,
+):
+    """A/B/n z-тест (Bonferroni). Третий вариант необязателен."""
+
+    if users_a <= 0 or users_b <= 0:
         raise ValueError("Кол-во пользователей должно быть >0")
+
+    if users_c is not None and users_c <= 0:
+        raise ValueError("Кол-во пользователей должно быть >0")
+
     cr_a = conv_a / users_a
     cr_b = conv_b / users_b
-    cr_c = conv_c / users_c
-    pooled = (conv_a + conv_b + conv_c) / (users_a + users_b + users_c)
-    se_ab = math.sqrt(pooled * (1 - pooled) * (1/users_a + 1/users_b))
-    se_ac = math.sqrt(pooled * (1 - pooled) * (1/users_a + 1/users_c))
+    cr_c = conv_c / users_c if users_c is not None and conv_c is not None else None
+
+    if users_c is not None and conv_c is not None:
+        pooled = (conv_a + conv_b + conv_c) / (users_a + users_b + users_c)
+    else:
+        pooled = (conv_a + conv_b) / (users_a + users_b)
+
+    se_ab = math.sqrt(pooled * (1 - pooled) * (1 / users_a + 1 / users_b))
     z_ab = (cr_b - cr_a) / se_ab if se_ab > 0 else 0
-    z_ac = (cr_c - cr_a) / se_ac if se_ac > 0 else 0
     p_ab = 2 * (1 - norm.cdf(abs(z_ab)))
-    p_ac = 2 * (1 - norm.cdf(abs(z_ac)))
-    alpha_adj = alpha / 2
-    sig_ab = (p_ab < alpha_adj)
-    sig_ac = (p_ac < alpha_adj)
-    winner = (
-        "B" if sig_ab and cr_b > cr_a else
-        "C" if sig_ac and cr_c > cr_a else
-        "A" if not sig_ab and not sig_ac else
-        "None"
-    )
+
+    if users_c is not None and conv_c is not None:
+        se_ac = math.sqrt(pooled * (1 - pooled) * (1 / users_a + 1 / users_c))
+        z_ac = (cr_c - cr_a) / se_ac if se_ac > 0 else 0
+        p_ac = 2 * (1 - norm.cdf(abs(z_ac)))
+        alpha_adj = alpha / 2
+        sig_ac = p_ac < alpha_adj
+        h_ac = 2 * (
+            math.asin(math.sqrt(cr_c)) - math.asin(math.sqrt(cr_a))
+        )
+        uplift_ac = (cr_c - cr_a) / cr_a * 100 if cr_a > 0 else 0
+    else:
+        p_ac = None
+        sig_ac = None
+        h_ac = None
+        uplift_ac = None
+        alpha_adj = alpha
+
+    sig_ab = p_ab < alpha_adj
     h_ab = 2 * (math.asin(math.sqrt(cr_b)) - math.asin(math.sqrt(cr_a)))
-    h_ac = 2 * (math.asin(math.sqrt(cr_c)) - math.asin(math.sqrt(cr_a)))
     uplift_ab = (cr_b - cr_a) / cr_a * 100 if cr_a > 0 else 0
-    uplift_ac = (cr_c - cr_a) / cr_a * 100 if cr_a > 0 else 0
+
+    if users_c is not None and conv_c is not None:
+        winner = (
+            "B"
+            if sig_ab and cr_b > cr_a
+            else "C" if sig_ac and cr_c > cr_a else "A" if not sig_ab and not sig_ac else "None"
+        )
+    else:
+        winner = "B" if sig_ab and cr_b > cr_a else "A" if not sig_ab else "None"
+
     return {
-        "cr_a": cr_a, "cr_b": cr_b, "cr_c": cr_c,
-        "uplift_ab": uplift_ab, "uplift_ac": uplift_ac,
-        "p_value_ab": p_ab, "p_value_ac": p_ac,
-        "significant_ab": sig_ab, "significant_ac": sig_ac,
-        "winner": winner, "cohens_h_ab": h_ab, "cohens_h_ac": h_ac
+        "cr_a": cr_a,
+        "cr_b": cr_b,
+        "cr_c": cr_c,
+        "uplift_ab": uplift_ab,
+        "uplift_ac": uplift_ac,
+        "p_value_ab": p_ab,
+        "p_value_ac": p_ac,
+        "significant_ab": sig_ab,
+        "significant_ac": sig_ac,
+        "winner": winner,
+        "cohens_h_ab": h_ab,
+        "cohens_h_ac": h_ac,
     }
 
 def bayesian_analysis(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b):
@@ -113,7 +148,7 @@ def run_aa_simulation(baseline, total_users, alpha, num_sim=1000):
         ub = total_users - ua
         ca = np.random.binomial(ua, baseline)
         cb = np.random.binomial(ub, baseline)
-        if evaluate_abn_test(ua,ca,ub,cb,1,1,alpha)['significant_ab']:
+        if evaluate_abn_test(ua, ca, ub, cb, alpha=alpha)['significant_ab']:
             false += 1
     return false / num_sim
 
@@ -130,7 +165,7 @@ def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
         cb_i = int(cb * i/looks + 0.5)
         if na == 0 or nb == 0:
             continue
-        res = evaluate_abn_test(na, ca_i, nb, cb_i, 1, 1, pocock_alpha)
+        res = evaluate_abn_test(na, ca_i, nb, cb_i, alpha=pocock_alpha)
         steps.append(res)
         if res['p_value_ab'] < pocock_alpha:
             break
@@ -182,29 +217,24 @@ def plot_confidence_intervals(users_a, conv_a, users_b, conv_b, alpha=0.05):
     return fig
 
 def plot_power_curve(p1, alpha, power):
-    """
-    Возвращает Plotly-кривую мощности.
-    """
-    p2s = np.linspace(max(0.001, p1*1.01), min(0.999, p1*2), 100)
-    ns  = [required_sample_size(p1, p2, alpha, power) for p2 in p2s]
+    """Возвращает график требуемого размера выборки от конверсии B."""
+    p2s = np.linspace(max(0.001, p1 * 1.01), min(0.999, p1 * 2), 100)
+    ns = [required_sample_size(p1, p2, alpha, power) for p2 in p2s]
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=p2s, y=ns, mode='lines',
-        hovertemplate='CR B: %{x:.2%}<br>n: %{y}<extra></extra>'
-    ))
-    fig.add_hline(
-        y=power,
-        line_dash='dash',
-        line_color='red',
-        annotation_text='Target Power',
-        annotation_position='bottom right'
+    fig.add_trace(
+        go.Scatter(
+            x=p2s,
+            y=ns,
+            mode="lines",
+            hovertemplate="CR B: %{x:.2%}<br>n: %{y}<extra></extra>",
+        )
     )
     fig.update_layout(
-        title='Power Curve',
-        xaxis_title='CR B',
-        yaxis_title='Required Sample Size',
-        margin=dict(l=40, r=20, t=50, b=40)
+        title="Required Sample Size vs. CR B",
+        xaxis_title="CR B",
+        yaxis_title="Required Sample Size",
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
 
