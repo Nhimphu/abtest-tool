@@ -35,6 +35,7 @@ from logic import (
     plot_bayesian_posterior,
     run_aa_simulation,
     run_sequential_analysis,
+    run_obrien_fleming,
     calculate_roi,
     plot_confidence_intervals,
     plot_power_curve,
@@ -86,6 +87,7 @@ class ABTestWindow(QMainWindow):
                 'bayesian_analysis': "Байес-анализ",
                 'aa_testing': "A/A тест",
                 'sequential_testing': "Послед. анализ",
+                'obrien_fleming': "O'Brien-Fleming",
                 'revenue_per_user': "Выручка на пользователя:",
                 'traffic_cost': "Стоимость трафика:",
                 'budget': "Бюджет:",
@@ -122,6 +124,7 @@ class ABTestWindow(QMainWindow):
                 'bayesian_analysis': "Bayesian Analysis",
                 'aa_testing': "A/A Test",
                 'sequential_testing': "Sequential Analysis",
+                'obrien_fleming': "O'Brien-Fleming",
                 'revenue_per_user': "Rev. per user:",
                 'traffic_cost': "Traffic cost:",
                 'budget': "Budget:",
@@ -263,6 +266,7 @@ class ABTestWindow(QMainWindow):
         self.baseline_slider.setRange(0, 1000)
         self.baseline_slider.setValue(40)
         self.baseline_slider.valueChanged.connect(self.update_ui_text)
+        self.baseline_slider.setToolTip("Baseline conversion rate")
 
         self.uplift_slider = QSlider(Qt.Orientation.Horizontal)
         self.uplift_slider.setRange(0, 1000)
@@ -273,6 +277,7 @@ class ABTestWindow(QMainWindow):
         self.alpha_slider.setRange(0, 100)
         self.alpha_slider.setValue(5)
         self.alpha_slider.valueChanged.connect(self.update_ui_text)
+        self.alpha_slider.setToolTip("Significance level")
 
         self.power_slider = QSlider(Qt.Orientation.Horizontal)
         self.power_slider.setRange(0, 100)
@@ -307,6 +312,8 @@ class ABTestWindow(QMainWindow):
         self.aa_button.clicked.connect(self._on_run_aa)
         self.seq_button = QPushButton()
         self.seq_button.clicked.connect(self._on_run_sequential)
+        self.obf_button = QPushButton()
+        self.obf_button.clicked.connect(self._on_run_obrien_fleming)
 
         # Priors для байес
         self.prior_alpha_spin = QDoubleSpinBox()
@@ -348,7 +355,7 @@ class ABTestWindow(QMainWindow):
         self.load_pre_exp_button = QPushButton()
         self.load_pre_exp_button.clicked.connect(lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented"))
         self.load_csv_button     = QPushButton()
-        self.load_csv_button.clicked.connect(lambda: QMessageBox.information(self, "Info", "CSV not implemented"))
+        self.load_csv_button.clicked.connect(self._on_load_csv)
         self.clear_button        = QPushButton()
         self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
 
@@ -404,6 +411,7 @@ class ABTestWindow(QMainWindow):
         left.addWidget(self.bayes_button)
         left.addWidget(self.aa_button)
         left.addWidget(self.seq_button)
+        left.addWidget(self.obf_button)
 
         left.addWidget(self.revenue_per_user_label)
         left.addWidget(self.revenue_per_user_var)
@@ -535,6 +543,7 @@ class ABTestWindow(QMainWindow):
         self.bayes_button.setText(L['bayesian_analysis'])
         self.aa_button.setText(L['aa_testing'])
         self.seq_button.setText(L['sequential_testing'])
+        self.obf_button.setText(L['obrien_fleming'])
         self.revenue_per_user_label.setText(L['revenue_per_user'])
         self.traffic_cost_label.setText(L['traffic_cost'])
         self.budget_label.setText(L['budget'])
@@ -661,6 +670,24 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
+    def _on_run_obrien_fleming(self):
+        try:
+            ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
+            ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
+            alpha  = self.alpha_slider.value()/100
+            steps = run_obrien_fleming(ua, ca, ub, cb, alpha)
+            txt = "<pre>O'Brien-Fleming\n"
+            for i, r in enumerate(steps, 1):
+                txt += (
+                    f"Step{i}: p={r['p_value_ab']:.4f} "
+                    f"thr={r['threshold']:.4f} win={r['winner']}\n"
+                )
+            txt += "</pre>"
+            self.results_text.setHtml(txt)
+            self._add_history("OBrien-Fleming", txt)
+        except Exception as e:
+            show_error(self, str(e))
+
     def _on_calculate_roi(self):
         try:
             rpu = float(self.revenue_per_user_var.text())
@@ -678,6 +705,23 @@ class ABTestWindow(QMainWindow):
             )
             self.results_text.setHtml(html)
             self._add_history("ROI", html)
+        except Exception as e:
+            show_error(self, str(e))
+
+    def _on_load_csv(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Load CSV", "", "CSV Files (*.csv)")
+        if not path:
+            return
+        try:
+            data = utils.load_counts_from_csv(path)
+            self.users_A_var.setText(str(data['users_a']))
+            self.conv_A_var.setText(str(data['conv_a']))
+            self.users_B_var.setText(str(data['users_b']))
+            self.conv_B_var.setText(str(data['conv_b']))
+            if data['users_c']:
+                self.users_C_var.setText(str(data['users_c']))
+                self.conv_C_var.setText(str(data['conv_c']))
+            QMessageBox.information(self, "Info", f"Loaded {path}")
         except Exception as e:
             show_error(self, str(e))
 
@@ -703,10 +747,51 @@ class ABTestWindow(QMainWindow):
     # ————— Сессионные функции и экспорт результатов —————
 
     def save_session(self):
-        QMessageBox.information(self, "Info", "Сохранение сессии не реализовано")
+        path, _ = QFileDialog.getSaveFileName(
+            self, self.i18n[self.lang]['save_session'], '', 'JSON Files (*.json)'
+        )
+        if not path:
+            return
+        data = {
+            'baseline': self.baseline_slider.value(),
+            'uplift': self.uplift_slider.value(),
+            'alpha': self.alpha_slider.value(),
+            'power': self.power_slider.value(),
+            'users_a': self.users_A_var.text(),
+            'conv_a': self.conv_A_var.text(),
+            'users_b': self.users_B_var.text(),
+            'conv_b': self.conv_B_var.text(),
+            'users_c': self.users_C_var.text(),
+            'conv_c': self.conv_C_var.text(),
+        }
+        try:
+            utils.save_session_data(data, path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
 
     def load_session(self):
-        QMessageBox.information(self, "Info", "Загрузка сессии не реализовано")
+        path, _ = QFileDialog.getOpenFileName(
+            self, self.i18n[self.lang]['load_session'], '', 'JSON Files (*.json)'
+        )
+        if not path:
+            return
+        try:
+            data = utils.load_session_data(path)
+            self.baseline_slider.setValue(int(data.get('baseline', 0)))
+            self.uplift_slider.setValue(int(data.get('uplift', 0)))
+            self.alpha_slider.setValue(int(data.get('alpha', 0)))
+            self.power_slider.setValue(int(data.get('power', 0)))
+            self.users_A_var.setText(str(data.get('users_a', '')))
+            self.conv_A_var.setText(str(data.get('conv_a', '')))
+            self.users_B_var.setText(str(data.get('users_b', '')))
+            self.conv_B_var.setText(str(data.get('conv_b', '')))
+            self.users_C_var.setText(str(data.get('users_c', '')))
+            self.conv_C_var.setText(str(data.get('conv_c', '')))
+            self.update_ui_text()
+            QMessageBox.information(self, "Success", f"Loaded {path}")
+        except Exception as e:
+            show_error(self, str(e))
 
     def export_pdf(self):
         path, _ = QFileDialog.getSaveFileName(
