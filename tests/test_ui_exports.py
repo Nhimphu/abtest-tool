@@ -83,6 +83,9 @@ class QFileDialog:
     @staticmethod
     def getSaveFileName(*args, **kwargs):
         return ('', '')
+    @staticmethod
+    def getOpenFileName(*args, **kwargs):
+        return ('', '')
 widgets_mod.QFileDialog = QFileDialog
 
 class QMessageBox:
@@ -146,3 +149,58 @@ def test_export_csv_invokes_util(monkeypatch):
     ABTestWindow.export_csv(dummy)
 
     assert recorded.get('args') == ({'Results': ['line1', 'line2']}, 'out.csv')
+
+
+def test_save_session_invokes_util(monkeypatch):
+    recorded = {}
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *a, **k: ('sess.json', ''))
+    monkeypatch.setattr(utils, 'save_session_data', lambda data, path: recorded.setdefault('args', (data, path)))
+
+    dummy = types.SimpleNamespace(
+        baseline_slider=types.SimpleNamespace(value=lambda: 10),
+        uplift_slider=types.SimpleNamespace(value=lambda: 5),
+        alpha_slider=types.SimpleNamespace(value=lambda: 5),
+        power_slider=types.SimpleNamespace(value=lambda: 90),
+        users_A_var=types.SimpleNamespace(text=lambda: '10'),
+        conv_A_var=types.SimpleNamespace(text=lambda: '1'),
+        users_B_var=types.SimpleNamespace(text=lambda: '12'),
+        conv_B_var=types.SimpleNamespace(text=lambda: '2'),
+        users_C_var=types.SimpleNamespace(text=lambda: '0'),
+        conv_C_var=types.SimpleNamespace(text=lambda: '0'),
+        i18n={'RU':{'save_session':'s','load_session':'l'},'EN':{'save_session':'s','load_session':'l'}},
+        lang='EN'
+    )
+    ABTestWindow.save_session(dummy)
+
+    assert recorded.get('args')[1] == 'sess.json'
+
+
+def test_load_session_invokes_util(monkeypatch):
+    data = {
+        'baseline': 10,
+        'uplift': 5,
+        'alpha': 5,
+        'power': 90,
+        'users_a': '10',
+    }
+    monkeypatch.setattr(QFileDialog, 'getOpenFileName', lambda *a, **k: ('sess.json', ''))
+    monkeypatch.setattr(utils, 'load_session_data', lambda p: data)
+
+    dummy = types.SimpleNamespace(
+        baseline_slider=types.SimpleNamespace(setValue=lambda v: recorded.setdefault('baseline', v)),
+        uplift_slider=types.SimpleNamespace(setValue=lambda v: None),
+        alpha_slider=types.SimpleNamespace(setValue=lambda v: None),
+        power_slider=types.SimpleNamespace(setValue=lambda v: None),
+        users_A_var=types.SimpleNamespace(setText=lambda v: None),
+        conv_A_var=types.SimpleNamespace(setText=lambda v: None),
+        users_B_var=types.SimpleNamespace(setText=lambda v: None),
+        conv_B_var=types.SimpleNamespace(setText=lambda v: None),
+        users_C_var=types.SimpleNamespace(setText=lambda v: None),
+        conv_C_var=types.SimpleNamespace(setText=lambda v: None),
+        update_ui_text=lambda: None,
+        i18n={'RU':{'save_session':'s','load_session':'l'},'EN':{'save_session':'s','load_session':'l'}},
+        lang='EN'
+    )
+    recorded = {}
+    ABTestWindow.load_session(dummy)
+    assert recorded.get('baseline') == 10

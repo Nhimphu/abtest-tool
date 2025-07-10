@@ -165,6 +165,16 @@ def run_aa_simulation(baseline, total_users, alpha, num_sim=1000):
     p_vals = 2 * (1 - norm.cdf(np.abs(z)))
     return float(np.mean(p_vals < alpha))
 
+def evaluate_abn_test_fdr(users_a, conv_a, users_b, conv_b, metrics=1, alpha=0.05):
+    """A/B тест с поправкой FDR (Benjamini-Hochberg)."""
+    res = evaluate_abn_test(users_a, conv_a, users_b, conv_b, alpha=alpha)
+    p = res["p_value_ab"]
+    m = max(1, int(metrics))
+    p_adj = min(p * m, 1.0)
+    res["p_value_fdr"] = p_adj
+    res["significant_fdr"] = p_adj < alpha
+    return res
+
 def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
     """
     Последовательный Pocock: возвращает (steps, pocock_alpha).
@@ -183,6 +193,32 @@ def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
         if res['p_value_ab'] < pocock_alpha:
             break
     return steps, pocock_alpha
+
+def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5):
+    """Sequential O'Brien-Fleming method.
+
+    Returns list of step results with per-look threshold.
+    """
+    if looks <= 0:
+        raise ValueError("looks must be positive")
+
+    base_z = norm.ppf(1 - alpha / 2)
+    steps = []
+    for i in range(1, looks + 1):
+        na = int(ua * i / looks)
+        nb = int(ub * i / looks)
+        ca_i = int(ca * i / looks + 0.5)
+        cb_i = int(cb * i / looks + 0.5)
+        if na == 0 or nb == 0:
+            continue
+        res = evaluate_abn_test(na, ca_i, nb, cb_i, alpha=alpha)
+        # threshold p-value for look i
+        thr = 2 * (1 - norm.cdf(base_z / math.sqrt(i)))
+        res["threshold"] = thr
+        steps.append(res)
+        if res["p_value_ab"] < thr:
+            break
+    return steps
 
 def calculate_roi(rpu, cost, budget, baseline_cr, uplift):
     """
@@ -281,3 +317,21 @@ def save_plot():
     path, _ = QFileDialog.getSaveFileName(None, "Save plot", "", "PNG Files (*.png);;PDF Files (*.pdf)")
     if path:
         plt.savefig(path)
+
+def allocate_bandit(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b, new_users=100):
+    """Простое распределение трафика по принципу Thompson Sampling."""
+    import random
+
+    a_alpha = alpha_prior + conv_a
+    a_beta  = beta_prior + (users_a - conv_a)
+    b_alpha = alpha_prior + conv_b
+    b_beta  = beta_prior + (users_b - conv_b)
+
+    b_alloc = 0
+    for _ in range(new_users):
+        sa = random.betavariate(a_alpha, a_beta)
+        sb = random.betavariate(b_alpha, b_beta)
+        if sb > sa:
+            b_alloc += 1
+
+    return new_users - b_alloc, b_alloc
