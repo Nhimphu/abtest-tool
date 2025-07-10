@@ -42,7 +42,7 @@ from logic import (
     plot_bootstrap_distribution,
     save_plot
 )
-from ui_wizard import Wizard
+from i18n import i18n
 import utils
 
 
@@ -72,84 +72,7 @@ class ABTestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.lang = "RU"
-        self.i18n = {
-            'RU': {
-                'title': "Ультимативный Инструмент A/B Тестирования",
-                'main': "Основной",
-                'history': "История",
-                'baseline': "Баз. конверсия:",
-                'uplift':   "Ожидаемый uplift:",
-                'alpha':    "α (значимость):",
-                'power':    "Мощность:",
-                'calculate_sample_size': "Рассчитать выборку",
-                'analyze_ab': "Анализ A/B/n",
-                'confidence_intervals': "Доверительные интервалы",
-                'bayesian_analysis': "Байес-анализ",
-                'aa_testing': "A/A тест",
-                'sequential_testing': "Послед. анализ",
-                'obrien_fleming': "O'Brien-Fleming",
-                'revenue_per_user': "Выручка на пользователя:",
-                'traffic_cost': "Стоимость трафика:",
-                'budget': "Бюджет:",
-                'calculate_roi': "Рассчитать ROI",
-                'load_csv': "Загр. CSV",
-                'pre_exp_data': "Загр. пред. данные",
-                'clear_results': "Очистить",
-                'save_plot': "Сохранить график",
-                'power_curve': "Кривая размера выборки",
-                'bootstrap': "Бутстрап",
-                'export_hist_csv': "Экспорт истории CSV",
-                'export_hist_xl': "Экспорт истории Excel",
-                'tutorial': "Туториал",
-                'delete_selected': "Удалить выбранное",
-                'clear_history': "Очистить всё",
-                'file': "Файл",
-                'save_session': "Сохранить сессию",
-                'load_session': "Загрузить сессию",
-                'export_pdf': "Экспорт PDF",
-                'export_excel': "Экспорт Excel",
-                'export_csv': "Экспорт CSV",
-                'wizard': "Помощник"
-            },
-            'EN': {
-                'title': "Ultimate A/B Testing Tool",
-                'main': "Main",
-                'history': "History",
-                'baseline': "Baseline CR:",
-                'uplift':   "Expected uplift:",
-                'alpha':    "α (signif.):",
-                'power':    "Power:",
-                'calculate_sample_size': "Calc. Sample",
-                'analyze_ab': "A/B/n Analysis",
-                'confidence_intervals': "Confidence Intervals",
-                'bayesian_analysis': "Bayesian Analysis",
-                'aa_testing': "A/A Test",
-                'sequential_testing': "Sequential Analysis",
-                'obrien_fleming': "O'Brien-Fleming",
-                'revenue_per_user': "Rev. per user:",
-                'traffic_cost': "Traffic cost:",
-                'budget': "Budget:",
-                'calculate_roi': "Calc. ROI",
-                'load_csv': "Load CSV",
-                'pre_exp_data': "Load Pre-exp",
-                'clear_results': "Clear",
-                'save_plot': "Save Plot",
-                'power_curve': "Sample Size Curve",
-                'bootstrap': "Bootstrap",
-                'export_hist_csv': "Export history CSV",
-                'export_hist_xl': "Export history Excel",
-                'tutorial': "Tutorial",
-                'delete_selected': "Delete Selected",
-                'clear_history': "Clear All",
-                'file': "File",
-                'save_session': "Save session",
-                'load_session': "Load session",
-                'export_pdf': "Export PDF",
-                'export_excel': "Export Excel",
-                'export_csv': "Export CSV",
-                'wizard': "Wizard"
-            }
-        }
+        self.i18n = i18n
 
         self.setWindowTitle(self.i18n[self.lang]['title'])
         self.setGeometry(100, 100, 1000, 800)
@@ -356,8 +279,6 @@ class ABTestWindow(QMainWindow):
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
         self.load_pre_exp_button.clicked.connect(lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented"))
-        self.load_csv_button     = QPushButton()
-        self.load_csv_button.clicked.connect(self._on_load_csv)
         self.clear_button        = QPushButton()
         self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
 
@@ -445,7 +366,6 @@ class ABTestWindow(QMainWindow):
         btns2 = QHBoxLayout()
         for btn in [
             self.load_pre_exp_button,
-            self.load_csv_button,
             self.clear_button
         ]:
             btns2.addWidget(btn)
@@ -473,12 +393,6 @@ class ABTestWindow(QMainWindow):
         mb = self.menuBar()
         # File / Файл
         fm = mb.addMenu(L['file'])
-        a1 = QAction(L['save_session'], self)
-        a1.triggered.connect(self.save_session)
-        fm.addAction(a1)
-        a2 = QAction(L['load_session'], self)
-        a2.triggered.connect(self.load_session)
-        fm.addAction(a2)
         fm.addSeparator()
         a3 = QAction(L['export_pdf'], self)
         a3.triggered.connect(self.export_pdf)
@@ -496,10 +410,6 @@ class ABTestWindow(QMainWindow):
         tut.triggered.connect(self.show_tutorial)
         hm.addAction(tut)
 
-        # Wizard / Помощник
-        wz = QAction(L['wizard'], self)
-        wz.triggered.connect(self.show_wizard)
-        mb.addAction(wz)
 
         # Language switch
         cw = QWidget()
@@ -551,7 +461,6 @@ class ABTestWindow(QMainWindow):
         self.budget_label.setText(L['budget'])
         self.roi_button.setText(L['calculate_roi'])
         self.load_pre_exp_button.setText(L['pre_exp_data'])
-        self.load_csv_button.setText(L['load_csv'])
         self.clear_button.setText(L['clear_results'])
         self.plot_ci_button.setText(L['confidence_intervals'])
         self.plot_power_button.setText(L['power_curve'])
@@ -710,37 +619,17 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
-    def _on_load_csv(self):
-        path, _ = QFileDialog.getOpenFileName(self, "Load CSV", "", "CSV Files (*.csv)")
-        if not path:
-            return
-        try:
-            data = utils.load_counts_from_csv(path)
-            self.users_A_var.setText(str(data['users_a']))
-            self.conv_A_var.setText(str(data['conv_a']))
-            self.users_B_var.setText(str(data['users_b']))
-            self.conv_B_var.setText(str(data['conv_b']))
-            if data['users_c']:
-                self.users_C_var.setText(str(data['users_c']))
-                self.conv_C_var.setText(str(data['conv_c']))
-            QMessageBox.information(self, "Info", f"Loaded {path}")
-        except Exception as e:
-            show_error(self, str(e))
 
     def show_tutorial(self):
         QMessageBox.information(
-            self, self.i18n[self.lang]['tutorial'],
+            self,
+            self.i18n[self.lang]['tutorial'],
             "🔹 Слайдеры CR, uplift, α, power\n"
             "🔹 Поля A/B/C\n"
             "🔹 Bayesian с priors\n"
             "🔹 ROI встроен\n"
-            "🔹 История с экспортом\n"
-            "🔹 Помощник (Wizard)"
+            "🔹 История с экспортом"
         )
-
-    def show_wizard(self):
-        wiz = Wizard(self, self.lang)
-        wiz.exec()
 
     def toggle_language(self):
         self.lang = "EN" if self.lang == "RU" else "RU"
@@ -748,52 +637,6 @@ class ABTestWindow(QMainWindow):
 
     # ————— Сессионные функции и экспорт результатов —————
 
-    def save_session(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, self.i18n[self.lang]['save_session'], '', 'JSON Files (*.json)'
-        )
-        if not path:
-            return
-        data = {
-            'baseline': self.baseline_slider.value(),
-            'uplift': self.uplift_slider.value(),
-            'alpha': self.alpha_slider.value(),
-            'power': self.power_slider.value(),
-            'users_a': self.users_A_var.text(),
-            'conv_a': self.conv_A_var.text(),
-            'users_b': self.users_B_var.text(),
-            'conv_b': self.conv_B_var.text(),
-            'users_c': self.users_C_var.text(),
-            'conv_c': self.conv_C_var.text(),
-        }
-        try:
-            utils.save_session_data(data, path)
-            QMessageBox.information(self, "Success", f"Saved to {path}")
-        except Exception as e:
-            show_error(self, str(e))
-
-    def load_session(self):
-        path, _ = QFileDialog.getOpenFileName(
-            self, self.i18n[self.lang]['load_session'], '', 'JSON Files (*.json)'
-        )
-        if not path:
-            return
-        try:
-            data = utils.load_session_data(path)
-            self.baseline_slider.setValue(int(data.get('baseline', 0)))
-            self.uplift_slider.setValue(int(data.get('uplift', 0)))
-            self.alpha_slider.setValue(int(data.get('alpha', 0)))
-            self.power_slider.setValue(int(data.get('power', 0)))
-            self.users_A_var.setText(str(data.get('users_a', '')))
-            self.conv_A_var.setText(str(data.get('conv_a', '')))
-            self.users_B_var.setText(str(data.get('users_b', '')))
-            self.conv_B_var.setText(str(data.get('conv_b', '')))
-            self.users_C_var.setText(str(data.get('users_c', '')))
-            self.conv_C_var.setText(str(data.get('conv_c', '')))
-            self.update_ui_text()
-            QMessageBox.information(self, "Success", f"Loaded {path}")
-        except Exception as e:
-            show_error(self, str(e))
 
     def export_pdf(self):
         path, _ = QFileDialog.getSaveFileName(

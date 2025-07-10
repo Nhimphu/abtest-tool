@@ -28,7 +28,7 @@ def calculate_mde(sample_size, alpha, power, p1):
     se = math.sqrt(2 * p1 * (1 - p1) / sample_size)
     return (z_alpha + z_beta) * se
 
-def evaluate_abn_test(
+def _evaluate_abn_test(
     users_a,
     conv_a,
     users_b,
@@ -37,7 +37,7 @@ def evaluate_abn_test(
     conv_c=None,
     alpha=0.05,
 ):
-    """A/B/n z-тест (Bonferroni). Третий вариант необязателен."""
+    """Внутренний A/B/n z-тест (Bonferroni)."""
 
     if users_a <= 0 or users_b <= 0:
         raise ValueError("Кол-во пользователей должно быть >0")
@@ -165,9 +165,18 @@ def run_aa_simulation(baseline, total_users, alpha, num_sim=1000):
     p_vals = 2 * (1 - norm.cdf(np.abs(z)))
     return float(np.mean(p_vals < alpha))
 
-def evaluate_abn_test_fdr(users_a, conv_a, users_b, conv_b, metrics=1, alpha=0.05):
-    """A/B тест с поправкой FDR (Benjamini-Hochberg)."""
-    res = evaluate_abn_test(users_a, conv_a, users_b, conv_b, alpha=alpha)
+def evaluate_abn_test(
+    users_a,
+    conv_a,
+    users_b,
+    conv_b,
+    users_c=None,
+    conv_c=None,
+    metrics=1,
+    alpha=0.05,
+):
+    """A/B/n тест с поправкой FDR (Benjamini–Hochberg)."""
+    res = _evaluate_abn_test(users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha)
     p = res["p_value_ab"]
     m = max(1, int(metrics))
     p_adj = min(p * m, 1.0)
@@ -188,7 +197,7 @@ def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
         cb_i = int(cb * i/looks + 0.5)
         if na == 0 or nb == 0:
             continue
-        res = evaluate_abn_test(na, ca_i, nb, cb_i, alpha=pocock_alpha)
+        res = _evaluate_abn_test(na, ca_i, nb, cb_i, alpha=pocock_alpha)
         steps.append(res)
         if res['p_value_ab'] < pocock_alpha:
             break
@@ -211,7 +220,7 @@ def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5):
         cb_i = int(cb * i / looks + 0.5)
         if na == 0 or nb == 0:
             continue
-        res = evaluate_abn_test(na, ca_i, nb, cb_i, alpha=alpha)
+        res = _evaluate_abn_test(na, ca_i, nb, cb_i, alpha=alpha)
         # threshold p-value for look i
         thr = 2 * (1 - norm.cdf(base_z / math.sqrt(i)))
         res["threshold"] = thr
@@ -318,20 +327,3 @@ def save_plot():
     if path:
         plt.savefig(path)
 
-def allocate_bandit(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b, new_users=100):
-    """Простое распределение трафика по принципу Thompson Sampling."""
-    import random
-
-    a_alpha = alpha_prior + conv_a
-    a_beta  = beta_prior + (users_a - conv_a)
-    b_alpha = alpha_prior + conv_b
-    b_beta  = beta_prior + (users_b - conv_b)
-
-    b_alloc = 0
-    for _ in range(new_users):
-        sa = random.betavariate(a_alpha, a_beta)
-        sb = random.betavariate(b_alpha, b_beta)
-        if sb > sa:
-            b_alloc += 1
-
-    return new_users - b_alloc, b_alloc
