@@ -182,29 +182,24 @@ def plot_confidence_intervals(users_a, conv_a, users_b, conv_b, alpha=0.05):
     return fig
 
 def plot_power_curve(p1, alpha, power):
-    """
-    Возвращает Plotly-кривую мощности.
-    """
-    p2s = np.linspace(max(0.001, p1*1.01), min(0.999, p1*2), 100)
-    ns  = [required_sample_size(p1, p2, alpha, power) for p2 in p2s]
+    """Возвращает график требуемого размера выборки от конверсии B."""
+    p2s = np.linspace(max(0.001, p1 * 1.01), min(0.999, p1 * 2), 100)
+    ns = [required_sample_size(p1, p2, alpha, power) for p2 in p2s]
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=p2s, y=ns, mode='lines',
-        hovertemplate='CR B: %{x:.2%}<br>n: %{y}<extra></extra>'
-    ))
-    fig.add_hline(
-        y=power,
-        line_dash='dash',
-        line_color='red',
-        annotation_text='Target Power',
-        annotation_position='bottom right'
+    fig.add_trace(
+        go.Scatter(
+            x=p2s,
+            y=ns,
+            mode="lines",
+            hovertemplate="CR B: %{x:.2%}<br>n: %{y}<extra></extra>",
+        )
     )
     fig.update_layout(
-        title='Power Curve',
-        xaxis_title='CR B',
-        yaxis_title='Required Sample Size',
-        margin=dict(l=40, r=20, t=50, b=40)
+        title="Required Sample Size vs. CR B",
+        xaxis_title="CR B",
+        yaxis_title="Required Sample Size",
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
 
