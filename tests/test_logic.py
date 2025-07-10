@@ -91,11 +91,8 @@ if 'reportlab' not in sys.modules:
 from logic import (
     required_sample_size,
     evaluate_abn_test,
-    evaluate_abn_test_fdr,
-    allocate_bandit,
+    run_obrien_fleming,
 )
-from utils import load_counts_from_csv
-from logic import run_obrien_fleming
 
 
 def test_required_sample_size_positive():
@@ -121,25 +118,9 @@ def test_evaluate_abn_test_invalid_counts():
 
 
 def test_evaluate_abn_test_fdr_adjustment():
-    res = evaluate_abn_test_fdr(100, 10, 100, 20, metrics=2, alpha=0.05)
+    res = evaluate_abn_test(100, 10, 100, 20, metrics=2, alpha=0.05)
     assert 'p_value_fdr' in res
     assert math.isclose(res['p_value_fdr'], min(res['p_value_ab'] * 2, 1.0))
-
-
-def test_allocate_bandit_counts():
-    a, b = allocate_bandit(1, 1, 50, 10, 50, 15, new_users=20)
-    assert a + b == 20
-
-
-def test_load_counts_from_csv(tmp_path):
-    p = tmp_path / 'data.csv'
-    with open(p, 'w', newline='') as f:
-        w = csv.writer(f)
-        w.writerow(['users_A','conv_A','users_B','conv_B'])
-        w.writerow([100, 10, 120, 20])
-    data = load_counts_from_csv(str(p))
-    assert data['users_a'] == 100
-    assert data['conv_b'] == 20
 
 
 def test_run_obrien_fleming_steps():

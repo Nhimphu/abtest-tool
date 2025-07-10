@@ -28,13 +28,6 @@ def validate_numeric(widget, min_val, max_val, percent=False):
         widget.setStyleSheet("border: 2px solid red;")
         return False
 
-def save_session_data(data, filepath):
-    with open(filepath, 'w', encoding='utf-8') as f:
-        json.dump(data, f, ensure_ascii=False, indent=4)
-
-def load_session_data(filepath):
-    with open(filepath, 'r', encoding='utf-8') as f:
-        return json.load(f)
 
 def export_pdf(html, filepath):
     c = pdfcanvas.Canvas(filepath, pagesize=letter)
@@ -68,25 +61,3 @@ def export_csv(sections, filepath):
 def show_error(parent, message):
     QMessageBox.critical(parent, "Ошибка", message)
 
-def load_counts_from_csv(filepath):
-    """Читает первый ряд CSV с колонками users_A, conv_A и т.д."""
-    with open(filepath, newline='', encoding='utf-8') as f:
-        reader = csv.DictReader(f)
-        row = next(reader, None)
-        if row is None:
-            raise ValueError('CSV is empty')
-
-    def get(col):
-        for k, v in row.items():
-            if k.lower() == col:
-                return int(float(v))
-        return 0
-
-    return {
-        'users_a': get('users_a'),
-        'conv_a': get('conv_a'),
-        'users_b': get('users_b'),
-        'conv_b': get('conv_b'),
-        'users_c': get('users_c'),
-        'conv_c': get('conv_c'),
-    }
