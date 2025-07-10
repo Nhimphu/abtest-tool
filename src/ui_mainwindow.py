@@ -108,7 +108,8 @@ class ABTestWindow(QMainWindow):
                 'load_session': "Загрузить сессию",
                 'export_pdf': "Экспорт PDF",
                 'export_excel': "Экспорт Excel",
-                'export_csv': "Экспорт CSV"
+                'export_csv': "Экспорт CSV",
+                'wizard': "Помощник"
             },
             'EN': {
                 'title': "Ultimate A/B Testing Tool",
@@ -145,7 +146,8 @@ class ABTestWindow(QMainWindow):
                 'load_session': "Load session",
                 'export_pdf': "Export PDF",
                 'export_excel': "Export Excel",
-                'export_csv': "Export CSV"
+                'export_csv': "Export CSV",
+                'wizard': "Wizard"
             }
         }
 
@@ -495,7 +497,7 @@ class ABTestWindow(QMainWindow):
         hm.addAction(tut)
 
         # Wizard / Помощник
-        wz = QAction("Помощник", self)
+        wz = QAction(L['wizard'], self)
         wz.triggered.connect(self.show_wizard)
         mb.addAction(wz)
 
