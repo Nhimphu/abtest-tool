@@ -3,6 +3,7 @@ import sys
 import types
 import statistics
 import math
+import pytest
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -60,3 +61,14 @@ def test_evaluate_abn_test_no_difference():
     res = evaluate_abn_test(1000, 100, 1000, 100, 1000, 100)
     assert not res['significant_ab']
     assert not res['significant_ac']
+
+
+def test_evaluate_abn_test_invalid_counts():
+    with pytest.raises(ValueError):
+        evaluate_abn_test(10, -1, 10, 0)
+
+    with pytest.raises(ValueError):
+        evaluate_abn_test(10, 5, 10, 11)
+
+    with pytest.raises(ValueError):
+        evaluate_abn_test(10, 5, 10, 5, 5, 6)
