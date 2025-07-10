@@ -45,6 +45,15 @@ def evaluate_abn_test(
     if users_c is not None and users_c <= 0:
         raise ValueError("Кол-во пользователей должно быть >0")
 
+    if not (0 <= conv_a <= users_a):
+        raise ValueError("Количество конверсий A должно быть от 0 до users_a")
+
+    if not (0 <= conv_b <= users_b):
+        raise ValueError("Количество конверсий B должно быть от 0 до users_b")
+
+    if users_c is not None and conv_c is not None and not (0 <= conv_c <= users_c):
+        raise ValueError("Количество конверсий C должно быть от 0 до users_c")
+
     cr_a = conv_a / users_a
     cr_b = conv_b / users_b
     cr_c = conv_c / users_c if users_c is not None and conv_c is not None else None
