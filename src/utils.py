@@ -49,7 +49,7 @@ def export_pdf(html, filepath):
 def export_excel(sections, filepath):
     with pd.ExcelWriter(filepath) as writer:
         for name, lines in sections.items():
-            rows = [l.strip().split(":") for l in lines if ":" in l]
+            rows = [line.strip().split(":") for line in lines if ":" in line]
             df = pd.DataFrame(rows, columns=["Metric", "Value"])
             df.to_excel(writer, sheet_name=name[:31], index=False)
 

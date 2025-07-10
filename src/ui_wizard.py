@@ -1,10 +1,9 @@
 # ui_wizard.py
 
 from PyQt6.QtWidgets import (
-    QWizard, QWizardPage, QLabel, QLineEdit, QVBoxLayout, QMessageBox
+    QWizard, QWizardPage, QLineEdit, QVBoxLayout, QMessageBox
 )
 from PyQt6.QtGui import QDoubleValidator, QIntValidator
-from PyQt6.QtCore import Qt
 
 class BaselinePage(QWizardPage):
     def __init__(self, texts, default_value: str):
