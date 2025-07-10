@@ -42,6 +42,7 @@ from logic import (
     save_plot
 )
 from ui_wizard import Wizard
+import utils
 
 
 def show_error(parent, msg):
@@ -703,10 +704,29 @@ class ABTestWindow(QMainWindow):
         QMessageBox.information(self, "Info", "Загрузка сессии не реализовано")
 
     def export_pdf(self):
-        QMessageBox.information(self, "Info", "Экспорт PDF не реализован")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save PDF", "", "PDF Files (*.pdf)"
+        )
+        if not path:
+            return
+        try:
+            utils.export_pdf(self.results_text.toPlainText(), path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
 
     def export_excel(self):
-        QMessageBox.information(self, "Info", "Экспорт Excel не реализован")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Excel", "", "Excel Files (*.xlsx)"
+        )
+        if not path:
+            return
+        try:
+            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            utils.export_excel(sections, path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
 
 
 if __name__ == "__main__":
