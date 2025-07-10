@@ -14,7 +14,10 @@ def required_sample_size(p1, p2, alpha, power):
     se_pooled = math.sqrt(2 * p_avg * (1 - p_avg))
     se_effect = math.sqrt(p1*(1-p1) + p2*(1-p2))
     n = ((z_alpha*se_pooled + z_beta*se_effect)**2)/((p1 - p2)**2)
-    return max(1, math.ceil(n/2))
+    # n already represents the sample size required per group.
+    # Returning ``n/2`` underestimates the needed observations and
+    # leads to underpowered experiments.
+    return max(1, math.ceil(n))
 
 def calculate_mde(sample_size, alpha, power, p1):
     """Минимальная обнаруживаемая разница при данных sample_size."""
