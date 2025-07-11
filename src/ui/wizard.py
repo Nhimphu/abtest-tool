@@ -62,7 +62,14 @@ class QuickABTestWizard(QWizard):
     """Step-by-step wizard for configuring a quick A/B test."""
 
     def __init__(self, parent=None) -> None:
+        self.parent = parent
         super().__init__(parent)
+        if parent is not None:
+            try:
+                self.setPalette(parent.palette())
+                self.setStyleSheet(parent.styleSheet())
+            except Exception:
+                pass
         self.setWindowTitle("Quick AB Test")
 
         self.addPage(self._build_flags_page())
