@@ -42,6 +42,7 @@ from logic import (
     plot_confidence_intervals,
     plot_power_curve,
     plot_bootstrap_distribution,
+    plot_alpha_spending,
     save_plot,
     srm_check,
 )
