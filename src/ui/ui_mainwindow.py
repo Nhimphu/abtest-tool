@@ -883,6 +883,8 @@ class ABTestWindow(QMainWindow):
         right.addLayout(btns)
         if self.alpha_plot_view:
             right.addWidget(self.alpha_plot_view)
+        # Display analysis results using a readable font
+        self.results_text.setStyleSheet("font-size:14pt; font-family:Arial;")
         right.addWidget(self.results_text)
 
         btns2 = QHBoxLayout()
