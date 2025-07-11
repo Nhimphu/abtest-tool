@@ -848,7 +848,13 @@ class ABTestWindow(QMainWindow):
         p = QPalette()
         p.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
         p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
+        p.setColor(QPalette.ColorRole.Base, Qt.GlobalColor.white)
+        p.setColor(QPalette.ColorRole.AlternateBase, Qt.GlobalColor.lightGray)
+        p.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.black)
+        p.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.white)
+        p.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         self.setPalette(p)
+        QApplication.setPalette(p)
 
     def update_ui_text(self):
         L = self.i18n[self.lang]
