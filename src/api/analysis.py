@@ -2,7 +2,7 @@
 
 import os
 from flask import Flask, jsonify, request
-from logic import evaluate_abn_test
+from stats.ab_test import evaluate_abn_test
 
 
 def create_app() -> Flask:

@@ -29,22 +29,24 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
 from PyQt6.QtCore import Qt, QDateTime
 
-from logic import (
+from stats.ab_test import (
     required_sample_size,
     calculate_mde,
     evaluate_abn_test,
     bayesian_analysis,
-    plot_bayesian_posterior,
     run_aa_simulation,
     run_sequential_analysis,
     run_obrien_fleming,
     calculate_roi,
+    srm_check,
+)
+from plots import (
+    plot_bayesian_posterior,
     plot_confidence_intervals,
     plot_power_curve,
     plot_bootstrap_distribution,
     plot_alpha_spending,
     save_plot,
-    srm_check,
 )
 from i18n import i18n, detect_language
 import utils

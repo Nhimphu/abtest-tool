@@ -112,19 +112,17 @@ if 'reportlab' not in sys.modules:
     sys.modules['reportlab.pdfbase.pdfmetrics'] = pdfmetrics_mod
     sys.modules['reportlab.pdfbase.ttfonts'] = ttfonts_mod
 
-from logic import (
+from stats.ab_test import (
     required_sample_size,
     evaluate_abn_test,
     run_obrien_fleming,
     cuped_adjustment,
     srm_check,
     pocock_alpha_curve,
-    ucb1,
-    epsilon_greedy,
-    plot_alpha_spending,
-    segment_data,
-    compute_custom_metric,
 )
+from bandit.strategies import ucb1, epsilon_greedy
+from plots import plot_alpha_spending
+from utils import segment_data, compute_custom_metric
 
 
 def test_required_sample_size_positive():
@@ -167,7 +165,7 @@ def test_run_obrien_fleming_threshold_used():
 
 
 def test_sequential_webhook_called(monkeypatch):
-    import logic
+    import stats.ab_test as logic
     called = {}
     monkeypatch.setattr(logic, 'send_webhook', lambda url, msg: called.setdefault('url', url))
     logic.run_sequential_analysis(100, 10, 100, 50, 0.05, looks=2, webhook_url='http://example.com')
