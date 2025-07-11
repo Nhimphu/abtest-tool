@@ -121,9 +121,11 @@ class AddDataSourceDialog:
                 "QDialog",
                 (),
                 {
+                    "__init__": lambda self, *a, **k: None,
                     "exec": lambda self: 0,
                     "accept": lambda self: None,
                     "reject": lambda self: None,
+                    "setWindowTitle": lambda self, *a, **k: None,
                 },
             ),
         )
@@ -144,7 +146,7 @@ class AddDataSourceDialog:
                     self.accepted = DummySig()
                     self.rejected = DummySig()
 
-        def _layout_stub():
+        def _layout_stub(*a, **k):
             return type(
                 "Layout",
                 (),
@@ -154,8 +156,12 @@ class AddDataSourceDialog:
                 },
             )()
 
-        QVBoxLayout = getattr(QtWidgets, "QVBoxLayout", _layout_stub)
-        QHBoxLayout = getattr(QtWidgets, "QHBoxLayout", _layout_stub)
+        QVBoxLayout_cls = getattr(QtWidgets, "QVBoxLayout", _layout_stub)
+        if not hasattr(QVBoxLayout_cls, "addWidget"):
+            QVBoxLayout_cls = _layout_stub
+        QHBoxLayout_cls = getattr(QtWidgets, "QHBoxLayout", _layout_stub)
+        if not hasattr(QHBoxLayout_cls, "addWidget"):
+            QHBoxLayout_cls = _layout_stub
         QLabel = getattr(
             QtWidgets,
             "QLabel",
@@ -179,6 +185,21 @@ class AddDataSourceDialog:
                 {"addItems": lambda *a, **k: None, "currentText": lambda self: ""},
             )(),
         )
+        if not hasattr(QComboBox, "addItems"):
+            QComboBox = type(
+                "QComboBox",
+                (),
+                {"addItems": lambda *a, **k: None, "currentText": lambda self: ""},
+            )
+        class _Sig:
+            def connect(self, *a, **k):
+                pass
+
+        QPushButton = getattr(
+            QtWidgets,
+            "QPushButton",
+            lambda *a, **k: type("QPushButton", (), {"clicked": _Sig()})(),
+        )
         QWidget = getattr(
             QtWidgets,
             "QWidget",
@@ -188,13 +209,27 @@ class AddDataSourceDialog:
                 {"setLayout": lambda *a, **k: None, "setVisible": lambda *a, **k: None},
             )(),
         )
+        if not hasattr(QWidget, "setVisible"):
+            QWidget = type(
+                "QWidget",
+                (),
+                {"setLayout": lambda *a, **k: None, "setVisible": lambda *a, **k: None},
+            )
 
         self._dialog = QDialog(parent)
-        layout = QVBoxLayout(self._dialog)
+        try:
+            layout = QVBoxLayout_cls(self._dialog)
+        except Exception:
+            layout = QVBoxLayout_cls()
         self._dialog.setWindowTitle("Add Data Source")
+        lang = detect_language()
+        L = i18n.get(lang, i18n.get("EN"))
         self.type_combo = QComboBox()
         self.type_combo.addItems(["BigQuery", "Redshift"])
-        layout.addWidget(QLabel("Type"))
+        lbl = QLabel()
+        if hasattr(lbl, "setText"):
+            lbl.setText("Type")
+        layout.addWidget(lbl)
         layout.addWidget(self.type_combo)
 
         self.rows = {}
@@ -208,10 +243,14 @@ class AddDataSourceDialog:
             "Password",
         ]:
             row = QWidget()
-            hl = QHBoxLayout(row)
+            hl = QHBoxLayout_cls(row)
             hl.setContentsMargins(0, 0, 0, 0)
-            lbl = QLabel(name)
-            fld = QLineEdit("5439" if name == "Port" else "")
+            lbl = QLabel()
+            if hasattr(lbl, "setText"):
+                lbl.setText(name)
+            fld = QLineEdit()
+            if hasattr(fld, "setText"):
+                fld.setText("5439" if name == "Port" else "")
             if name == "Password" and hasattr(QLineEdit, "EchoMode"):
                 fld.setEchoMode(QLineEdit.EchoMode.Password)
             hl.addWidget(lbl)
@@ -226,6 +265,13 @@ class AddDataSourceDialog:
         self.bq_project = self.rows["project"][1]
         self.bq_creds = self.rows["credentials"][1]
 
+        self.test_button = QPushButton()
+        if hasattr(self.test_button, "setText"):
+            self.test_button.setText(L.get("test_connection", "Test"))
+        if hasattr(self.test_button, "clicked"):
+            self.test_button.clicked.connect(self._on_test)  # type: ignore
+        layout.addWidget(self.test_button)
+
         self.buttons = QDialogButtonBox(
             QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
         )
@@ -233,8 +279,45 @@ class AddDataSourceDialog:
         self.buttons.accepted.connect(self._dialog.accept)
         self.buttons.rejected.connect(self._dialog.reject)
 
-        self.type_combo.currentTextChanged.connect(self._update_fields)
+        if hasattr(self.type_combo, "currentTextChanged"):
+            self.type_combo.currentTextChanged.connect(self._update_fields)  # type: ignore
         self._update_fields(self.type_combo.currentText())
+
+    def _on_test(self) -> bool:
+        """Attempt to connect using provided credentials."""
+        lang = detect_language()
+        L = i18n.get(lang, i18n.get("EN"))
+        try:
+            from utils.connectors import BigQueryConnector, RedshiftConnector
+            if self.type_combo.currentText() == "BigQuery":
+                conn = BigQueryConnector(
+                    self.bq_project.text(),
+                    self.bq_creds.text(),
+                )
+            else:
+                conn = RedshiftConnector(
+                    host=self.rs_host.text(),
+                    port=int(self.rs_port.text() or 0),
+                    database=self.rs_db.text(),
+                    user=self.rs_user.text(),
+                    password=self.rs_pass.text(),
+                )
+            conn.query("SELECT 1")
+        except Exception as e:  # pragma: no cover - optional deps
+            if hasattr(QMessageBox, "critical"):
+                QMessageBox.critical(
+                    self._dialog,
+                    "Error",
+                    f"{L.get('conn_fail', 'Connection failed')}: {e}",
+                )
+            return False
+        if hasattr(QMessageBox, "information"):
+            QMessageBox.information(
+                self._dialog,
+                "Success",
+                L.get("conn_ok", "Connection successful"),
+            )
+        return True
 
     def _update_fields(self, text: str) -> None:
         is_bq = text == "BigQuery"
