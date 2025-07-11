@@ -2,6 +2,7 @@
 
 import sys
 import sqlite3
+import os
 
 from migrations_runner import run_migrations
 import csv
@@ -307,6 +308,8 @@ class AddDataSourceDialog:
                     password=self.rs_pass.text(),
                 )
             conn.query("SELECT 1")
+            if hasattr(conn, "close"):
+                conn.close()
         except Exception as e:  # pragma: no cover - optional deps
             if hasattr(QMessageBox, "critical"):
                 QMessageBox.critical(
@@ -374,6 +377,13 @@ class ABTestWindow(QMainWindow):
         self.sources = []
         self.token = None
         self.refresh_token = None
+
+    def closeEvent(self, event):
+        """Ensure database connection is closed on exit."""
+        try:
+            self.conn.close()
+        finally:
+            super().closeEvent(event)
 
     # ————— История (SQLite) —————
 
@@ -921,8 +931,9 @@ class ABTestWindow(QMainWindow):
 
     def _request_token(self, username: str, password: str) -> str | None:
         data = json.dumps({"username": username, "password": password}).encode()
+        api_url = os.environ.get("API_URL", "http://localhost:5000")
         req = urllib.request.Request(
-            "http://localhost:5000/login",
+            f"{api_url.rstrip('/')}/login",
             data=data,
             headers={"Content-Type": "application/json"},
         )

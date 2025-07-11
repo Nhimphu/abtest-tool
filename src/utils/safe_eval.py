@@ -15,6 +15,8 @@ def _eval(node: ast.AST, records: List[Dict[str, Any]]) -> float:
         if isinstance(node.op, ast.Mult):
             return left * right
         if isinstance(node.op, ast.Div):
+            if right == 0:
+                raise ZeroDivisionError("division by zero")
             return left / right
         raise ValueError("Unsupported operator")
     if isinstance(node, ast.UnaryOp):

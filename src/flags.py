@@ -77,3 +77,8 @@ class FeatureFlagStore:
             cur = self._conn.cursor()
             cur.execute("DELETE FROM flags WHERE name=?", (name,))
             self._conn.commit()
+
+    def close(self) -> None:
+        """Close underlying database connection."""
+        with self._lock:
+            self._conn.close()
