@@ -19,6 +19,22 @@ def create_app() -> Flask:
         )
         return jsonify(res)
 
+    @app.route('/spec', methods=['GET'])
+    def spec():
+        """Return minimal OpenAPI spec."""
+        spec = {
+            "openapi": "3.0.0",
+            "info": {"title": "Analysis API", "version": "1.0"},
+            "paths": {
+                "/abtest": {
+                    "post": {
+                        "responses": {"200": {"description": "AB test result"}}
+                    }
+                }
+            },
+        }
+        return jsonify(spec)
+
     return app
 
 

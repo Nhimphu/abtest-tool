@@ -6,8 +6,8 @@ import pytest
 from flags import FeatureFlagStore
 
 
-def test_create_and_update_flag():
-    store = FeatureFlagStore()
+def test_create_and_update_flag(tmp_path):
+    store = FeatureFlagStore(db_path=str(tmp_path/'db.sqlite'))
     flag = store.create_flag('new', enabled=True, rollout=50)
     assert flag.name == 'new'
     assert flag.enabled is True
@@ -19,15 +19,24 @@ def test_create_and_update_flag():
     assert store.get_flag('new').enabled is False
 
 
-def test_create_duplicate_flag():
-    store = FeatureFlagStore()
+def test_create_duplicate_flag(tmp_path):
+    store = FeatureFlagStore(db_path=str(tmp_path/'db.sqlite'))
     store.create_flag('foo')
     with pytest.raises(ValueError):
         store.create_flag('foo')
 
 
-def test_update_invalid_rollout():
-    store = FeatureFlagStore()
+def test_update_invalid_rollout(tmp_path):
+    store = FeatureFlagStore(db_path=str(tmp_path/'db.sqlite'))
     store.create_flag('bar')
     with pytest.raises(ValueError):
         store.update_flag('bar', rollout=120)
+
+
+def test_store_persists(tmp_path):
+    db = tmp_path / 'db.sqlite'
+    s1 = FeatureFlagStore(db_path=str(db))
+    s1.create_flag('persist', enabled=True)
+    s2 = FeatureFlagStore(db_path=str(db))
+    flag = s2.get_flag('persist')
+    assert flag.enabled is True

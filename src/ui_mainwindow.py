@@ -20,6 +20,7 @@ from PyQt6.QtWidgets import (
     QTabWidget,
     QTableWidget,
     QTableWidgetItem,
+    QProgressBar,
     QMessageBox,
     QFileDialog,
     QTextBrowser,
@@ -139,6 +140,8 @@ class ABTestWindow(QMainWindow):
             self.history_table.setItem(r, 1, QTableWidgetItem(ts))
             self.history_table.setItem(r, 2, QTableWidgetItem(test))
             self.history_table.setItem(r, 3, QTableWidgetItem(res))
+            pb = self._build_inline_chart(res)
+            self.history_table.setCellWidget(r, 4, pb)
 
     def _add_history(self, name, content):
         ts = QDateTime.currentDateTime().toString()
@@ -158,6 +161,8 @@ class ABTestWindow(QMainWindow):
         self.history_table.setItem(r, 1, QTableWidgetItem(ts))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
         self.history_table.setItem(r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", "")))
+        pb = self._build_inline_chart(content)
+        self.history_table.setCellWidget(r, 4, pb)
 
     def _delete_selected_history(self):
         for r in reversed(range(self.history_table.rowCount())):
@@ -172,6 +177,24 @@ class ABTestWindow(QMainWindow):
         self.conn.cursor().execute("DELETE FROM history")
         self.conn.commit()
         self.history_table.setRowCount(0)
+
+    def _filter_history(self, text):
+        text = text.lower()
+        for r in range(self.history_table.rowCount()):
+            show = False
+            for c in range(1, self.history_table.columnCount() - 1):
+                item = self.history_table.item(r, c)
+                if item and text in item.text().lower():
+                    show = True
+                    break
+            self.history_table.setRowHidden(r, not show)
+
+    def _build_inline_chart(self, text):
+        pb = QProgressBar()
+        pb.setRange(0, 100)
+        pb.setTextVisible(False)
+        pb.setValue(abs(hash(text)) % 100)
+        return pb
 
     def _export_history_csv(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save History CSV", "", "CSV Files (*.csv)")
@@ -217,6 +240,7 @@ class ABTestWindow(QMainWindow):
         self.uplift_slider.setRange(0, 1000)
         self.uplift_slider.setValue(100)
         self.uplift_slider.valueChanged.connect(self.update_ui_text)
+        self.uplift_slider.setToolTip("Expected uplift of variant")
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
         self.alpha_slider.setRange(0, 100)
@@ -228,10 +252,12 @@ class ABTestWindow(QMainWindow):
         self.power_slider.setRange(0, 100)
         self.power_slider.setValue(90)
         self.power_slider.valueChanged.connect(self.update_ui_text)
+        self.power_slider.setToolTip("Statistical power")
 
         # Кнопка расчёта
         self.calc_button = QPushButton()
         self.calc_button.clicked.connect(self.calculate_sample_size)
+        self.calc_button.setToolTip("Calculate sample size")
 
         # Поля A/B/C
         for G in ["A", "B", "C"]:
@@ -249,16 +275,22 @@ class ABTestWindow(QMainWindow):
         # Кнопки анализа
         self.analyze_button = QPushButton()
         self.analyze_button.clicked.connect(self._on_analyze_abn)
+        self.analyze_button.setToolTip("Run A/B/n test")
         self.conf_button = QPushButton()
         self.conf_button.clicked.connect(self._on_plot_confidence_intervals)
+        self.conf_button.setToolTip("Plot confidence intervals")
         self.bayes_button = QPushButton()
         self.bayes_button.clicked.connect(self._on_run_bayesian)
+        self.bayes_button.setToolTip("Run Bayesian analysis")
         self.aa_button = QPushButton()
         self.aa_button.clicked.connect(self._on_run_aa)
+        self.aa_button.setToolTip("Run A/A simulation")
         self.seq_button = QPushButton()
         self.seq_button.clicked.connect(self._on_run_sequential)
+        self.seq_button.setToolTip("Run sequential analysis")
         self.obf_button = QPushButton()
         self.obf_button.clicked.connect(self._on_run_obrien_fleming)
+        self.obf_button.setToolTip("Run O'Brien-Fleming analysis")
 
         # Priors для байес
         self.prior_alpha_spin = QDoubleSpinBox()
@@ -278,26 +310,35 @@ class ABTestWindow(QMainWindow):
         self.revenue_per_user_label = QLabel()
         self.revenue_per_user_var   = QLineEdit("50")
         self.revenue_per_user_var.setValidator(QDoubleValidator(0, 1e9, 2))
+        self.revenue_per_user_var.setToolTip("Revenue per user")
         self.traffic_cost_label     = QLabel()
         self.traffic_cost_var       = QLineEdit("10")
         self.traffic_cost_var.setValidator(QDoubleValidator(0, 1e9, 2))
+        self.traffic_cost_var.setToolTip("Traffic cost per user")
         self.budget_label           = QLabel()
         self.budget_var             = QLineEdit("10000")
         self.budget_var.setValidator(QDoubleValidator(0, 1e12, 2))
+        self.budget_var.setToolTip("Available budget")
         self.roi_button             = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
+        self.roi_button.setToolTip("Calculate ROI")
 
         # Графики
         self.plot_ci_button       = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
+        self.plot_ci_button.setToolTip("Confidence intervals plot")
         self.plot_power_button    = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
+        self.plot_power_button.setToolTip("Required sample size curve")
         self.plot_alpha_button    = QPushButton()
         self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
+        self.plot_alpha_button.setToolTip("Alpha spending plot")
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
+        self.plot_bootstrap_button.setToolTip("Bootstrap distribution")
         self.save_plot_button     = QPushButton()
         self.save_plot_button.clicked.connect(save_plot)
+        self.save_plot_button.setToolTip("Save last plot")
 
         # Результаты
         self.results_text = QTextBrowser()
@@ -305,17 +346,24 @@ class ABTestWindow(QMainWindow):
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
         self.load_pre_exp_button.clicked.connect(lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented"))
+        self.load_pre_exp_button.setToolTip("Load pre-experiment data")
         self.clear_button        = QPushButton()
         self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
+        self.clear_button.setToolTip("Clear results")
 
         # История
-        self.history_table      = QTableWidget(0, 4)
-        self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат"])
+        self.history_table      = QTableWidget(0, 5)
+        self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат", "⇵"])
         self.history_table.setSortingEnabled(True)
+        self.history_filter = QLineEdit()
+        self.history_filter.setPlaceholderText("Filter history")
+        self.history_filter.textChanged.connect(self._filter_history)
         self.del_selected_button = QPushButton()
         self.del_selected_button.clicked.connect(self._delete_selected_history)
+        self.del_selected_button.setToolTip("Delete selected history rows")
         self.clear_history_button = QPushButton()
         self.clear_history_button.clicked.connect(self._clear_all_history)
+        self.clear_history_button.setToolTip("Clear all history")
 
     # ————— Построение интерфейса —————
 
@@ -409,6 +457,7 @@ class ABTestWindow(QMainWindow):
         tab_hist = QWidget()
         self.tab_widget.addTab(tab_hist, "")
         vh = QVBoxLayout(tab_hist)
+        vh.addWidget(self.history_filter)
         vh.addWidget(self.history_table)
         hh = QHBoxLayout()
         hh.addWidget(self.del_selected_button)

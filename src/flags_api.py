@@ -11,6 +11,25 @@ def create_app() -> Flask:
         flags = store.list_flags()
         return jsonify([flag.__dict__ for flag in flags])
 
+    @app.route('/spec', methods=['GET'])
+    def spec():
+        """Return minimal OpenAPI spec."""
+        spec = {
+            "openapi": "3.0.0",
+            "info": {"title": "Flags API", "version": "1.0"},
+            "paths": {
+                "/flags": {
+                    "get": {"responses": {"200": {"description": "List flags"}}},
+                    "post": {"responses": {"201": {"description": "Created"}}},
+                },
+                "/flags/{name}": {
+                    "put": {"responses": {"200": {"description": "Updated"}}},
+                    "delete": {"responses": {"204": {"description": "Deleted"}}},
+                },
+            },
+        }
+        return jsonify(spec)
+
     @app.route('/flags', methods=['POST'])
     def create_flag():
         data = request.get_json(force=True)
