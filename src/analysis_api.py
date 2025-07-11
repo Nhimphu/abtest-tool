@@ -1,3 +1,6 @@
+"""Minimal Flask API exposing core analysis helpers."""
+
+import os
 from flask import Flask, jsonify, request
 from logic import evaluate_abn_test
 
@@ -21,7 +24,8 @@ def create_app() -> Flask:
 
 def main():
     app = create_app()
-    app.run()
+    port = int(os.environ.get("PORT", "5000"))
+    app.run(port=port)
 
 
 if __name__ == '__main__':
