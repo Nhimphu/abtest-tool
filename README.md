@@ -41,3 +41,13 @@ Swagger‑UI отображается по адресу `/docs`.
 - Light/Dark theme toggle and sortable history table
 - Simple segmentation helpers and custom metric expressions parsed via AST for security
 
+
+## Docker
+
+Для продакшн-сборки используется multi-stage `Dockerfile.prod`. Он устанавливает
+только необходимые зависимости и запускает приложение на базе образа
+`python:3.11-slim`.
+
+```bash
+docker build -f Dockerfile.prod -t abtest-tool .
+```

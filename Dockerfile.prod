@@ -1,0 +1,18 @@
+# syntax=docker/dockerfile:1
+
+# Build stage: install production dependencies
+FROM python:3.11-slim AS builder
+WORKDIR /app
+COPY requirements.prod.txt ./requirements.txt
+RUN pip install --prefix=/install --no-cache-dir -r requirements.txt
+
+# Runtime stage
+FROM python:3.11-slim
+WORKDIR /app
+COPY --from=builder /install /usr/local
+COPY src ./src
+COPY alembic alembic
+COPY alembic.ini .
+COPY plugins plugins
+COPY resources.qss resources.qss
+CMD ["python", "-m", "src.ui.main"]
