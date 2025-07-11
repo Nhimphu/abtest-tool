@@ -74,6 +74,7 @@ class ABTestWindow(QMainWindow):
         super().__init__()
         self.lang = detect_language()
         self.i18n = i18n
+        self.undo_stack = []
 
         self.setWindowTitle(self.i18n[self.lang]['title'])
         self.setGeometry(100, 100, 1000, 800)
@@ -101,16 +102,21 @@ class ABTestWindow(QMainWindow):
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT,
                 test TEXT,
-                result TEXT
+                result TEXT,
+                comment TEXT DEFAULT ''
             )''')
+        try:
+            c.execute("ALTER TABLE history ADD COLUMN comment TEXT")
+        except sqlite3.OperationalError:
+            pass
         self.conn.commit()
 
     def _load_history(self):
         c = self.conn.cursor()
-        c.execute("SELECT id,timestamp,test,result FROM history ORDER BY id")
+        c.execute("SELECT id,timestamp,test,result,comment FROM history ORDER BY id")
         rows = c.fetchall()
         self.history_table.setRowCount(0)
-        for rec_id, ts, test, res in rows:
+        for rec_id, ts, test, res, comment in rows:
             r = self.history_table.rowCount()
             self.history_table.insertRow(r)
             chk = QTableWidgetItem()
@@ -120,13 +126,19 @@ class ABTestWindow(QMainWindow):
             self.history_table.setItem(r, 1, QTableWidgetItem(ts))
             self.history_table.setItem(r, 2, QTableWidgetItem(test))
             self.history_table.setItem(r, 3, QTableWidgetItem(res))
+            self.history_table.setItem(r, 4, QTableWidgetItem(comment))
 
     def _add_history(self, name, content):
         ts = QDateTime.currentDateTime().toString()
         c = self.conn.cursor()
         c.execute(
-            "INSERT INTO history(timestamp,test,result) VALUES(?,?,?)",
-            (ts, name, content.replace("<pre>", "").replace("</pre>", ""))
+            "INSERT INTO history(timestamp,test,result,comment) VALUES(?,?,?,?)",
+            (
+                ts,
+                name,
+                content.replace("<pre>", "").replace("</pre>", ""),
+                self.comment_field.text(),
+            ),
         )
         self.conn.commit()
         rec_id = c.lastrowid
@@ -139,32 +151,52 @@ class ABTestWindow(QMainWindow):
         self.history_table.setItem(r, 1, QTableWidgetItem(ts))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
         self.history_table.setItem(r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", "")))
+        self.history_table.setItem(r, 4, QTableWidgetItem(self.comment_field.text()))
 
     def _delete_selected_history(self):
         for r in reversed(range(self.history_table.rowCount())):
             item = self.history_table.item(r, 0)
             if item.checkState() == Qt.CheckState.Checked:
                 rec_id = item.data(Qt.ItemDataRole.UserRole)
+                row = [self.history_table.item(r, i).text() for i in range(1,5)]
+                self.undo_stack.append((rec_id, row))
                 self.conn.cursor().execute("DELETE FROM history WHERE id=?", (rec_id,))
                 self.conn.commit()
                 self.history_table.removeRow(r)
 
     def _clear_all_history(self):
-        self.conn.cursor().execute("DELETE FROM history")
+        c = self.conn.cursor()
+        c.execute("SELECT id,timestamp,test,result,comment FROM history")
+        for rec in c.fetchall():
+            self.undo_stack.append((rec[0], list(rec[1:])))
+        c.execute("DELETE FROM history")
         self.conn.commit()
         self.history_table.setRowCount(0)
+
+    def _undo_last_history(self):
+        if not self.undo_stack:
+            return
+        _, row = self.undo_stack.pop()
+        ts, test, result, comment = row
+        c = self.conn.cursor()
+        c.execute(
+            "INSERT INTO history(timestamp,test,result,comment) VALUES(?,?,?,?)",
+            (ts, test, result, comment),
+        )
+        self.conn.commit()
+        self._load_history()
 
     def _export_history_csv(self):
         path, _ = QFileDialog.getSaveFileName(self, "Save History CSV", "", "CSV Files (*.csv)")
         if not path:
             return
         c = self.conn.cursor()
-        c.execute("SELECT timestamp,test,result FROM history ORDER BY id")
+        c.execute("SELECT timestamp,test,result,comment FROM history ORDER BY id")
         rows = c.fetchall()
         try:
             with open(path, 'w', newline='', encoding='utf-8') as f:
                 w = csv.writer(f)
-                w.writerow(['Timestamp', 'Test', 'Result'])
+                w.writerow(['Timestamp', 'Test', 'Result', 'Comment'])
                 w.writerows(rows)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
@@ -175,8 +207,8 @@ class ABTestWindow(QMainWindow):
         if not path:
             return
         df = pd.read_sql_query(
-            "SELECT timestamp AS Timestamp, test AS Test, result AS Result FROM history ORDER BY id",
-            self.conn
+            "SELECT timestamp AS Timestamp, test AS Test, result AS Result, comment AS Comment FROM history ORDER BY id",
+            self.conn,
         )
         try:
             df.to_excel(path, index=False)
@@ -282,6 +314,8 @@ class ABTestWindow(QMainWindow):
 
         # Результаты
         self.results_text = QTextBrowser()
+        self.comment_field = QLineEdit()
+        self.comment_field.setPlaceholderText("Comment")
 
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
@@ -290,13 +324,15 @@ class ABTestWindow(QMainWindow):
         self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
 
         # История
-        self.history_table      = QTableWidget(0, 4)
-        self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат"])
+        self.history_table      = QTableWidget(0, 5)
+        self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат", "Comment"])
         self.history_table.setSortingEnabled(True)
         self.del_selected_button = QPushButton()
         self.del_selected_button.clicked.connect(self._delete_selected_history)
         self.clear_history_button = QPushButton()
         self.clear_history_button.clicked.connect(self._clear_all_history)
+        self.undo_button = QPushButton()
+        self.undo_button.clicked.connect(self._undo_last_history)
 
     # ————— Построение интерфейса —————
 
@@ -373,6 +409,7 @@ class ABTestWindow(QMainWindow):
             btns.addWidget(btn)
         right.addLayout(btns)
         right.addWidget(self.results_text)
+        right.addWidget(self.comment_field)
 
         btns2 = QHBoxLayout()
         for btn in [
@@ -394,6 +431,7 @@ class ABTestWindow(QMainWindow):
         hh = QHBoxLayout()
         hh.addWidget(self.del_selected_button)
         hh.addWidget(self.clear_history_button)
+        hh.addWidget(self.undo_button)
         vh.addLayout(hh)
 
         # Меню
@@ -494,6 +532,8 @@ class ABTestWindow(QMainWindow):
         self.save_plot_button.setText(L['save_plot'])
         self.del_selected_button.setText(L['delete_selected'])
         self.clear_history_button.setText(L['clear_history'])
+        self.undo_button.setText('Undo')
+        self.comment_field.setPlaceholderText(L.get('comment', 'Comment'))
 
     # ————— Обработчики —————
 

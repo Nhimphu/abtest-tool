@@ -1,4 +1,5 @@
 GUI-приложение для расчёта sample size, A/B/n анализов, построения графиков.
+![coverage](coverage.svg)
 
 ```bash
 git clone https://github.com/Nhimphu/abtest-tool.git
@@ -26,4 +27,5 @@ pytest -q
 - Sequential analysis functions accept a `webhook_url` parameter
 - Light/Dark theme toggle and sortable history table
 - Simple segmentation helpers and custom metric expressions
+- Comment field and undo/redo for session history
 

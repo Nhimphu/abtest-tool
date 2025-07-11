@@ -15,3 +15,5 @@ setuptools==80.9.0
 tzdata==2025.2
 pytest==8.1.1
 Flask==3.0.3
+pytest-cov==4.1.0
+coverage-badge==1.1.0

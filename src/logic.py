@@ -390,7 +390,7 @@ def epsilon_greedy(values, counts, epsilon=0.1):
 
 
 def plot_alpha_spending(alpha, looks):
-    """Return Plotly figure of Pocock and O'Brien-Fleming alpha spending."""
+    """Return interactive Plotly figure of Pocock and O'Brien-Fleming alpha spending."""
     pocock = pocock_alpha_curve(alpha, looks)
     obf = [
         2 * (1 - norm.cdf(norm.ppf(1 - alpha / 2) / math.sqrt(i)))
@@ -398,13 +398,30 @@ def plot_alpha_spending(alpha, looks):
     ]
     fig = go.Figure()
     fig.add_trace(
-        go.Scatter(x=list(range(1, looks + 1)), y=pocock, mode="lines+markers", name="Pocock")
+        go.Scatter(
+            x=list(range(1, looks + 1)),
+            y=pocock,
+            mode="lines+markers",
+            name="Pocock",
+            hovertemplate="Look %{x}<br>α %{y:.4f}<extra></extra>",
+        )
     )
     fig.add_trace(
-        go.Scatter(x=list(range(1, looks + 1)), y=obf, mode="lines+markers", name="O'Brien-Fleming")
+        go.Scatter(
+            x=list(range(1, looks + 1)),
+            y=obf,
+            mode="lines+markers",
+            name="O'Brien-Fleming",
+            hovertemplate="Look %{x}<br>α %{y:.4f}<extra></extra>",
+        )
     )
     fig.update_layout(
-        title="Alpha Spending", xaxis_title="Look", yaxis_title="Alpha", margin=dict(l=40, r=20, t=50, b=40)
+        title="Alpha Spending",
+        xaxis_title="Look",
+        yaxis_title="Alpha",
+        hovermode="x unified",
+        xaxis=dict(rangeslider=dict(visible=True)),
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
 
