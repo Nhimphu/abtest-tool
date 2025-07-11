@@ -221,7 +221,14 @@ class AddDataSourceDialog:
                 {"setLayout": lambda *a, **k: None, "setVisible": lambda *a, **k: None},
             )
 
+        self.parent = parent
         self._dialog = QDialog(parent)
+        if parent is not None:
+            try:
+                self._dialog.setPalette(parent.palette())
+                self._dialog.setStyleSheet(parent.styleSheet())
+            except Exception:
+                pass
         try:
             layout = QVBoxLayout_cls(self._dialog)
         except Exception:
