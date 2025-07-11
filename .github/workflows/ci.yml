@@ -23,13 +23,24 @@ jobs:
       - name: Smoke tests
         if: github.event_name == 'schedule'
         run: pytest tests/test_logic.py tests/test_flags.py
-      - name: Publish coverage badge
+      - name: Generate coverage badge
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           coverage xml
           coverage-badge -o coverage.svg -f
-          git config user.name github-actions
-          git config user.email github-actions@github.com
-          git add coverage.svg README.md
-          git commit -m "Update coverage badge" || exit 0
-          git push
+
+      - name: Commit coverage badge
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { execSync } = require('child_process');
+            execSync('git config user.name github-actions');
+            execSync('git config user.email github-actions@github.com');
+            execSync('git add coverage.svg README.md');
+            try {
+              execSync('git commit -m "Update coverage badge"');
+              execSync('git push');
+            } catch (error) {
+              console.log('No changes to commit');
+            }
