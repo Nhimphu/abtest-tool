@@ -11,6 +11,7 @@ PyQt6_sip==13.10.2
 python-dateutil==2.9.0.post0
 pytz==2025.2
 reportlab==4.4.2
+qrcode==7.4.2
 setuptools==80.9.0
 tzdata==2025.2
 pytest==8.1.1

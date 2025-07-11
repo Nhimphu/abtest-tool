@@ -1,4 +1,5 @@
 GUI-приложение для расчёта sample size, A/B/n анализов, построения графиков.
+![coverage](coverage.svg)
 
 ```bash
 git clone https://github.com/Nhimphu/abtest-tool.git

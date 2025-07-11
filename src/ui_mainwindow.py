@@ -3,6 +3,8 @@
 import sys
 import sqlite3
 import csv
+import json
+import math
 import pandas as pd
 
 from PyQt6.QtWidgets import (
@@ -25,8 +27,19 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
     QComboBox,
 )
-from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
+from PyQt6.QtGui import (
+    QPalette,
+    QColor,
+    QIntValidator,
+    QDoubleValidator,
+    QAction,
+    QPixmap,
+)
 from PyQt6.QtCore import Qt, QDateTime
+import base64
+import io
+import qrcode
+from scipy.stats import norm
 
 from logic import (
     required_sample_size,
@@ -43,6 +56,7 @@ from logic import (
     plot_bootstrap_distribution,
     save_plot,
     srm_check,
+    pocock_alpha_curve,
 )
 from i18n import i18n, detect_language
 import utils
@@ -79,6 +93,8 @@ class ABTestWindow(QMainWindow):
         self.setWindowTitle(self.i18n[self.lang]['title'])
         self.setGeometry(100, 100, 1000, 800)
 
+        self._states = []
+        self._state_idx = -1
         # Инициализируем историю
         self._init_history_db()
         # Создаём виджеты
@@ -91,6 +107,7 @@ class ABTestWindow(QMainWindow):
         self._load_history()
         # Обновляем тексты
         self.update_ui_text()
+        self._push_state()
 
     # ————— История (SQLite) —————
 
@@ -140,6 +157,7 @@ class ABTestWindow(QMainWindow):
         self.history_table.setItem(r, 1, QTableWidgetItem(ts))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
         self.history_table.setItem(r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", "")))
+        self._push_state()
 
     def _delete_selected_history(self):
         for r in reversed(range(self.history_table.rowCount())):
@@ -214,6 +232,7 @@ class ABTestWindow(QMainWindow):
         # Кнопка расчёта
         self.calc_button = QPushButton()
         self.calc_button.clicked.connect(self.calculate_sample_size)
+        self.calc_button.setToolTip("Calculate sample size")
 
         # Поля A/B/C
         for G in ["A", "B", "C"]:
@@ -231,16 +250,22 @@ class ABTestWindow(QMainWindow):
         # Кнопки анализа
         self.analyze_button = QPushButton()
         self.analyze_button.clicked.connect(self._on_analyze_abn)
+        self.analyze_button.setToolTip("Run A/B/n test")
         self.conf_button = QPushButton()
         self.conf_button.clicked.connect(self._on_plot_confidence_intervals)
+        self.conf_button.setToolTip("Show confidence intervals")
         self.bayes_button = QPushButton()
         self.bayes_button.clicked.connect(self._on_run_bayesian)
+        self.bayes_button.setToolTip("Run Bayesian analysis")
         self.aa_button = QPushButton()
         self.aa_button.clicked.connect(self._on_run_aa)
+        self.aa_button.setToolTip("Run A/A simulation")
         self.seq_button = QPushButton()
         self.seq_button.clicked.connect(self._on_run_sequential)
+        self.seq_button.setToolTip("Run Pocock sequential")
         self.obf_button = QPushButton()
         self.obf_button.clicked.connect(self._on_run_obrien_fleming)
+        self.obf_button.setToolTip("Run OBrien-Fleming sequential")
 
         # Priors для байес
         self.prior_alpha_spin = QDoubleSpinBox()
@@ -268,21 +293,35 @@ class ABTestWindow(QMainWindow):
         self.budget_var.setValidator(QDoubleValidator(0, 1e12, 2))
         self.roi_button             = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
+        self.roi_button.setToolTip("Calculate ROI")
 
         # Графики
         self.plot_ci_button       = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
+        self.plot_ci_button.setToolTip("Plot confidence intervals")
         self.plot_power_button    = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
+        self.plot_power_button.setToolTip("Plot power curve")
         self.plot_alpha_button    = QPushButton()
         self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
+        self.plot_alpha_button.setToolTip("Plot α-spending")
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
+        self.plot_bootstrap_button.setToolTip("Bootstrap distribution")
         self.save_plot_button     = QPushButton()
         self.save_plot_button.clicked.connect(save_plot)
+        self.save_plot_button.setToolTip("Save last plot")
 
         # Результаты
         self.results_text = QTextBrowser()
+        self.alpha_inline_label = QLabel()
+
+        self.undo_button = QPushButton("Undo")
+        self.undo_button.clicked.connect(self.undo_state)
+        self.redo_button = QPushButton("Redo")
+        self.redo_button.clicked.connect(self.redo_state)
+        self.share_button = QPushButton("Share")
+        self.share_button.clicked.connect(self.share_session)
 
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
@@ -374,6 +413,12 @@ class ABTestWindow(QMainWindow):
             btns.addWidget(btn)
         right.addLayout(btns)
         right.addWidget(self.results_text)
+        right.addWidget(self.alpha_inline_label)
+
+        nav = QHBoxLayout()
+        for btn in [self.undo_button, self.redo_button, self.share_button]:
+            nav.addWidget(btn)
+        right.addLayout(nav)
 
         btns2 = QHBoxLayout()
         for btn in [
@@ -493,6 +538,9 @@ class ABTestWindow(QMainWindow):
         self.plot_alpha_button.setText('α-spending')
         self.plot_bootstrap_button.setText(L['bootstrap'])
         self.save_plot_button.setText(L['save_plot'])
+        self.undo_button.setText('Undo')
+        self.redo_button.setText('Redo')
+        self.share_button.setText('Share')
         self.del_selected_button.setText(L['delete_selected'])
         self.clear_history_button.setText(L['clear_history'])
 
@@ -568,6 +616,22 @@ class ABTestWindow(QMainWindow):
             fig = plot_alpha_spending(alpha, looks=5)
             w = PlotWindow(self)
             w.display_plot(fig)
+            import matplotlib.pyplot as plt
+            plt.clf()
+            poc = pocock_alpha_curve(alpha, 5)
+            obf = [
+                2 * (1 - norm.cdf(norm.ppf(1 - alpha / 2) / math.sqrt(i)))
+                for i in range(1, 6)
+            ]
+            plt.plot(range(1, 6), poc, label="Pocock")
+            plt.plot(range(1, 6), obf, label="OBF")
+            plt.legend()
+            buf = io.BytesIO()
+            plt.savefig(buf, format="png")
+            pix = QPixmap()
+            pix.loadFromData(buf.getvalue(), "PNG")
+            self.alpha_inline_label.setPixmap(pix)
+            plt.close()
         except Exception as e:
             show_error(self, str(e))
 
@@ -685,6 +749,65 @@ class ABTestWindow(QMainWindow):
         else:
             self.apply_dark_theme()
             self.theme_button.setText("☀")
+
+    # ----- Session state management -----
+    def _capture_state(self):
+        return {
+            'baseline': self.baseline_slider.value(),
+            'uplift': self.uplift_slider.value(),
+            'alpha': self.alpha_slider.value(),
+            'power': self.power_slider.value(),
+            'users_A': self.users_A_var.text(),
+            'conv_A': self.conv_A_var.text(),
+            'users_B': self.users_B_var.text(),
+            'conv_B': self.conv_B_var.text(),
+            'users_C': self.users_C_var.text(),
+            'conv_C': self.conv_C_var.text(),
+            'results': self.results_text.toHtml(),
+        }
+
+    def _restore_state(self, state):
+        self.baseline_slider.setValue(int(state.get('baseline', 0)))
+        self.uplift_slider.setValue(int(state.get('uplift', 0)))
+        self.alpha_slider.setValue(int(state.get('alpha', 0)))
+        self.power_slider.setValue(int(state.get('power', 0)))
+        self.users_A_var.setText(state.get('users_A', ''))
+        self.conv_A_var.setText(state.get('conv_A', ''))
+        self.users_B_var.setText(state.get('users_B', ''))
+        self.conv_B_var.setText(state.get('conv_B', ''))
+        self.users_C_var.setText(state.get('users_C', ''))
+        self.conv_C_var.setText(state.get('conv_C', ''))
+        self.results_text.setHtml(state.get('results', ''))
+        self.update_ui_text()
+
+    def _push_state(self):
+        self._states = self._states[: self._state_idx + 1]
+        self._states.append(self._capture_state())
+        self._state_idx = len(self._states) - 1
+
+    def undo_state(self):
+        if self._state_idx > 0:
+            self._state_idx -= 1
+            self._restore_state(self._states[self._state_idx])
+
+    def redo_state(self):
+        if self._state_idx < len(self._states) - 1:
+            self._state_idx += 1
+            self._restore_state(self._states[self._state_idx])
+
+    def share_session(self):
+        state = self._capture_state()
+        data = base64.urlsafe_b64encode(json.dumps(state).encode()).decode()
+        url = f"abtest://load?state={data}"
+        img = qrcode.make(url)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        b64 = base64.b64encode(buf.getvalue()).decode()
+        pix = QPixmap()
+        pix.loadFromData(buf.getvalue(), "PNG")
+        self.alpha_inline_label.setPixmap(pix)
+        QMessageBox.information(self, "Share", url)
+
 
     # ————— Сессионные функции и экспорт результатов —————
 

@@ -81,6 +81,11 @@ if 'reportlab' not in sys.modules:
 if 'pandas' not in sys.modules:
     sys.modules['pandas'] = types.ModuleType('pandas')
 
+if 'qrcode' not in sys.modules:
+    qr_mod = types.ModuleType('qrcode')
+    qr_mod.make = lambda data: types.SimpleNamespace(save=lambda *a, **k: None)
+    sys.modules['qrcode'] = qr_mod
+
 pyqt6_mod = sys.modules.get('PyQt6') or types.ModuleType('PyQt6')
 widgets_mod = sys.modules.get('PyQt6.QtWidgets') or types.ModuleType('PyQt6.QtWidgets')
 gui_mod = sys.modules.get('PyQt6.QtGui') or types.ModuleType('PyQt6.QtGui')
@@ -119,9 +124,12 @@ widgets_mod.QMessageBox = QMessageBox
 
 pyqt6_mod.QtWidgets = widgets_mod
 
-for name in ['QPalette','QColor','QIntValidator','QDoubleValidator','QAction']:
+for name in ['QPalette','QColor','QIntValidator','QDoubleValidator','QAction','QPixmap']:
     if not hasattr(gui_mod, name):
-        setattr(gui_mod, name, type(name, (), {}))
+        if name == 'QPixmap':
+            setattr(gui_mod, name, type('QPixmap', (), {'loadFromData': lambda *a, **k: None}))
+        else:
+            setattr(gui_mod, name, type(name, (), {}))
 pyqt6_mod.QtGui = gui_mod
 
 if not hasattr(core_mod, 'Qt'):

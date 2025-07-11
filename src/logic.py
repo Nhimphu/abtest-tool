@@ -359,6 +359,16 @@ def cuped_adjustment(x, covariate):
     return [xi - theta * ci for xi, ci in zip(x, c)]
 
 
+def cuped_preanalysis(metric, covariate):
+    """Return CUPED-adjusted mean, variance and reduction ratio."""
+    adj = cuped_adjustment(metric, covariate)
+    mean_adj = sum(adj) / len(adj)
+    var_adj = np.var(adj, ddof=1)
+    var_orig = np.var(metric, ddof=1)
+    reduction = 1 - var_adj / var_orig if var_orig > 0 else 0.0
+    return mean_adj, var_adj, reduction
+
+
 def srm_check(users_a, users_b, alpha=0.05):
     """Simple SRM check using chi-square test."""
     total = users_a + users_b

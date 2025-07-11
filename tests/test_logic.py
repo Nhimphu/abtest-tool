@@ -4,6 +4,10 @@ import types
 import statistics
 import math
 import csv
+try:
+    import numpy as np
+except Exception:
+    np = None
 import pytest
 
 # Add src to path
@@ -34,6 +38,8 @@ if 'numpy' not in sys.modules:
         random=lambda: 0.0,
     )
     sys.modules['numpy'] = np_mod
+    if np is None:
+        np = np_mod
 
 if 'scipy.stats' not in sys.modules:
     nd = statistics.NormalDist()
@@ -117,6 +123,7 @@ from logic import (
     evaluate_abn_test,
     run_obrien_fleming,
     cuped_adjustment,
+    cuped_preanalysis,
     srm_check,
     pocock_alpha_curve,
     ucb1,
@@ -172,6 +179,14 @@ def test_cuped_no_change_with_zero_covariate():
     x = [1, 2, 3]
     adjusted = cuped_adjustment(x, [0, 0, 0])
     assert all(math.isclose(a, b) for a, b in zip(x, adjusted))
+
+
+def test_cuped_preanalysis_reduces_variance():
+    metric = [1, 2, 3, 4, 5]
+    covariate = [1, 2, 3, 4, 6]
+    mean_adj, var_adj, red = cuped_preanalysis(metric, covariate)
+    assert var_adj < np.var(metric, ddof=1)
+    assert 0 <= red <= 1
 
 
 def test_srm_check_detects_imbalance():
