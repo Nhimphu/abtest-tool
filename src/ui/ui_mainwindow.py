@@ -30,6 +30,7 @@ from PyQt6.QtWidgets import (
     QFileDialog,
     QTextBrowser,
     QComboBox,
+    QGroupBox,
 )
 from PyQt6.QtGui import (
     QPalette,
@@ -797,29 +798,51 @@ class ABTestWindow(QMainWindow):
                     f"Conversions in group {G}",
                 )
             )
-            left.addWidget(getattr(self, f"conv_{G}_var"))
+        left.addWidget(getattr(self, f"conv_{G}_var"))
 
         left.addWidget(self.analyze_button)
-        left.addWidget(QLabel("α-prior:"))
-        left.addWidget(self.prior_alpha_spin)
-        left.addWidget(QLabel("β-prior:"))
-        left.addWidget(self.prior_beta_spin)
-        left.addWidget(self.bayes_button)
-        left.addWidget(with_help_label(self.bandit_label, "Bandit strategy"))
-        left.addWidget(self.bandit_combo)
-        left.addWidget(self.aa_button)
-        left.addWidget(self.seq_button)
-        left.addWidget(self.obf_button)
+        advanced_box = QGroupBox("Advanced")
+        advanced_box.setCheckable(True)
+        adv_layout = QVBoxLayout(advanced_box)
 
-        left.addWidget(with_help_label(self.revenue_per_user_label, "Revenue per user"))
-        left.addWidget(self.revenue_per_user_var)
-        left.addWidget(
-            with_help_label(self.traffic_cost_label, "Traffic cost per user")
-        )
-        left.addWidget(self.traffic_cost_var)
-        left.addWidget(with_help_label(self.budget_label, "Available budget"))
-        left.addWidget(self.budget_var)
-        left.addWidget(self.roi_button)
+        alpha_prior_label = QLabel("α-prior:")
+        beta_prior_label = QLabel("β-prior:")
+        bandit_help = with_help_label(self.bandit_label, "Bandit strategy")
+        rpu_help = with_help_label(self.revenue_per_user_label, "Revenue per user")
+        cost_help = with_help_label(self.traffic_cost_label, "Traffic cost per user")
+        bud_help = with_help_label(self.budget_label, "Available budget")
+
+        adv_widgets = [
+            alpha_prior_label,
+            self.prior_alpha_spin,
+            beta_prior_label,
+            self.prior_beta_spin,
+            self.bayes_button,
+            bandit_help,
+            self.bandit_combo,
+            self.aa_button,
+            self.seq_button,
+            self.obf_button,
+            rpu_help,
+            self.revenue_per_user_var,
+            cost_help,
+            self.traffic_cost_var,
+            bud_help,
+            self.budget_var,
+            self.roi_button,
+        ]
+
+        for w in adv_widgets:
+            adv_layout.addWidget(w)
+
+        def _toggle_adv(checked: bool) -> None:
+            for w in adv_widgets:
+                w.setVisible(checked)
+
+        advanced_box.toggled.connect(_toggle_adv)
+        _toggle_adv(advanced_box.isChecked())
+
+        left.addWidget(advanced_box)
         left.addStretch()
 
         lw = QWidget()
