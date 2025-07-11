@@ -4,29 +4,32 @@ from scipy.stats import norm, beta, chi2
 import plotly.graph_objects as go
 from PyQt6.QtWidgets import QFileDialog
 
+
 def required_sample_size(p1, p2, alpha, power):
     """Размер выборки на группу (двусторонний тест разности пропорций)."""
     if p1 == p2 or p1 <= 0 or p2 <= 0:
-        return float('inf')
-    z_alpha = norm.ppf(1 - alpha/2)
-    z_beta  = norm.ppf(power)
-    p_avg   = (p1 + p2)/2
+        return float("inf")
+    z_alpha = norm.ppf(1 - alpha / 2)
+    z_beta = norm.ppf(power)
+    p_avg = (p1 + p2) / 2
     se_pooled = math.sqrt(2 * p_avg * (1 - p_avg))
-    se_effect = math.sqrt(p1*(1-p1) + p2*(1-p2))
-    n = ((z_alpha*se_pooled + z_beta*se_effect)**2)/((p1 - p2)**2)
+    se_effect = math.sqrt(p1 * (1 - p1) + p2 * (1 - p2))
+    n = ((z_alpha * se_pooled + z_beta * se_effect) ** 2) / ((p1 - p2) ** 2)
     # n already represents the sample size required per group.
     # Returning ``n/2`` underestimates the needed observations and
     # leads to underpowered experiments.
     return max(1, math.ceil(n))
 
+
 def calculate_mde(sample_size, alpha, power, p1):
     """Минимальная обнаруживаемая разница при данных sample_size."""
     if sample_size <= 0 or p1 <= 0:
-        return float('inf')
-    z_alpha = norm.ppf(1 - alpha/2)
-    z_beta  = norm.ppf(power)
+        return float("inf")
+    z_alpha = norm.ppf(1 - alpha / 2)
+    z_beta = norm.ppf(power)
     se = math.sqrt(2 * p1 * (1 - p1) / sample_size)
     return (z_alpha + z_beta) * se
+
 
 def _evaluate_abn_test(
     users_a,
@@ -73,9 +76,7 @@ def _evaluate_abn_test(
         p_ac = 2 * (1 - norm.cdf(abs(z_ac)))
         alpha_adj = alpha / 2
         sig_ac = p_ac < alpha_adj
-        h_ac = 2 * (
-            math.asin(math.sqrt(cr_c)) - math.asin(math.sqrt(cr_a))
-        )
+        h_ac = 2 * (math.asin(math.sqrt(cr_c)) - math.asin(math.sqrt(cr_a)))
         uplift_ac = (cr_c - cr_a) / cr_a * 100 if cr_a > 0 else 0
     else:
         p_ac = None
@@ -92,7 +93,11 @@ def _evaluate_abn_test(
         winner = (
             "B"
             if sig_ab and cr_b > cr_a
-            else "C" if sig_ac and cr_c > cr_a else "A" if not sig_ab and not sig_ac else "None"
+            else (
+                "C"
+                if sig_ac and cr_c > cr_a
+                else "A" if not sig_ab and not sig_ac else "None"
+            )
         )
     else:
         winner = "B" if sig_ab and cr_b > cr_a else "A" if not sig_ab else "None"
@@ -112,6 +117,7 @@ def _evaluate_abn_test(
         "cohens_h_ac": h_ac,
     }
 
+
 def bayesian_analysis(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b):
     """
     Bayesian A/B: Beta(alpha_prior+conv, beta_prior+nonconv).
@@ -121,15 +127,16 @@ def bayesian_analysis(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b)
       pdf_a, pdf_b: плотности A/B
     """
     a1 = alpha_prior + conv_a
-    b1 = beta_prior  + (users_a - conv_a)
+    b1 = beta_prior + (users_a - conv_a)
     a2 = alpha_prior + conv_b
-    b2 = beta_prior  + (users_b - conv_b)
-    x = np.linspace(0,1,500)
+    b2 = beta_prior + (users_b - conv_b)
+    x = np.linspace(0, 1, 500)
     pdf_a = beta.pdf(x, a1, b1)
     pdf_b = beta.pdf(x, a2, b2)
     cdf_a = beta.cdf(x, a1, b1)
-    prob  = np.trapz(pdf_b * cdf_a, x)
+    prob = np.trapz(pdf_b * cdf_a, x)
     return prob, x, pdf_a, pdf_b
+
 
 def plot_bayesian_posterior(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b):
     """
@@ -139,15 +146,16 @@ def plot_bayesian_posterior(alpha_prior, beta_prior, users_a, conv_a, users_b, c
         alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b
     )
     fig = go.Figure()
-    fig.add_trace(go.Scatter(x=x, y=pdf_a, mode='lines', name='Posterior A'))
-    fig.add_trace(go.Scatter(x=x, y=pdf_b, mode='lines', name='Posterior B'))
+    fig.add_trace(go.Scatter(x=x, y=pdf_a, mode="lines", name="Posterior A"))
+    fig.add_trace(go.Scatter(x=x, y=pdf_b, mode="lines", name="Posterior B"))
     fig.update_layout(
         title=f"P(B > A) = {prob:.2%}",
-        xaxis_title='Conversion rate',
-        yaxis_title='Density',
-        margin=dict(l=40, r=20, t=50, b=40)
+        xaxis_title="Conversion rate",
+        yaxis_title="Density",
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
+
 
 def run_aa_simulation(baseline, total_users, alpha, num_sim=1000):
     """A/A симуляция, возвращает фактический FPR."""
@@ -165,6 +173,7 @@ def run_aa_simulation(baseline, total_users, alpha, num_sim=1000):
     p_vals = 2 * (1 - norm.cdf(np.abs(z)))
     return float(np.mean(p_vals < alpha))
 
+
 def evaluate_abn_test(
     users_a,
     conv_a,
@@ -176,7 +185,9 @@ def evaluate_abn_test(
     alpha=0.05,
 ):
     """A/B/n тест с поправкой FDR (Benjamini–Hochberg)."""
-    res = _evaluate_abn_test(users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha)
+    res = _evaluate_abn_test(
+        users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha
+    )
     p = res["p_value_ab"]
     m = max(1, int(metrics))
     p_adj = min(p * m, 1.0)
@@ -184,24 +195,26 @@ def evaluate_abn_test(
     res["significant_fdr"] = p_adj < alpha
     return res
 
+
 def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
     """
     Последовательный Pocock: возвращает (steps, pocock_alpha).
     """
-    pocock_alpha = alpha * (1 - (1 - 0.5**(1/looks)) / (1 - 0.5))
+    pocock_alpha = alpha * (1 - (1 - 0.5 ** (1 / looks)) / (1 - 0.5))
     steps = []
-    for i in range(1, looks+1):
-        na = int(ua * i/looks)
-        nb = int(ub * i/looks)
-        ca_i = int(ca * i/looks + 0.5)
-        cb_i = int(cb * i/looks + 0.5)
+    for i in range(1, looks + 1):
+        na = int(ua * i / looks)
+        nb = int(ub * i / looks)
+        ca_i = int(ca * i / looks + 0.5)
+        cb_i = int(cb * i / looks + 0.5)
         if na == 0 or nb == 0:
             continue
         res = _evaluate_abn_test(na, ca_i, nb, cb_i, alpha=pocock_alpha)
         steps.append(res)
-        if res['p_value_ab'] < pocock_alpha:
+        if res["p_value_ab"] < pocock_alpha:
             break
     return steps, pocock_alpha
+
 
 def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5):
     """Sequential O'Brien-Fleming method.
@@ -229,16 +242,18 @@ def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5):
             break
     return steps
 
+
 def calculate_roi(rpu, cost, budget, baseline_cr, uplift):
     """
     ROI = (new_rev - base_rev) / budget * 100.
     """
-    users    = budget / cost
+    users = budget / cost
     base_rev = users * baseline_cr * rpu
-    new_rev  = users * (baseline_cr*(1+uplift)) * rpu
-    profit   = new_rev - base_rev
-    roi      = profit / budget * 100
+    new_rev = users * (baseline_cr * (1 + uplift)) * rpu
+    profit = new_rev - base_rev
+    roi = profit / budget * 100
     return users, base_rev, new_rev, profit, roi
+
 
 def plot_confidence_intervals(users_a, conv_a, users_b, conv_b, alpha=0.05):
     """
@@ -248,31 +263,40 @@ def plot_confidence_intervals(users_a, conv_a, users_b, conv_b, alpha=0.05):
     cr_b = conv_b / users_b
     se_a = math.sqrt(cr_a * (1 - cr_a) / users_a)
     se_b = math.sqrt(cr_b * (1 - cr_b) / users_b)
-    margin_a = norm.ppf(1 - alpha/2) * se_a
-    margin_b = norm.ppf(1 - alpha/2) * se_b
+    margin_a = norm.ppf(1 - alpha / 2) * se_a
+    margin_b = norm.ppf(1 - alpha / 2) * se_b
     ci_a = (cr_a - margin_a, cr_a + margin_a)
     ci_b = (cr_b - margin_b, cr_b + margin_b)
 
     fig = go.Figure()
-    fig.add_trace(go.Scatter(
-        x=[ci_a[0], ci_a[1]], y=[1,1],
-        mode='lines', line=dict(width=10),
-        name=f'A CI {(1-alpha)*100:.0f}%',
-        hovertemplate='A: %{x:.2%}<extra></extra>'
-    ))
-    fig.add_trace(go.Scatter(
-        x=[ci_b[0], ci_b[1]], y=[0,0],
-        mode='lines', line=dict(width=10),
-        name=f'B CI {(1-alpha)*100:.0f}%',
-        hovertemplate='B: %{x:.2%}<extra></extra>'
-    ))
+    fig.add_trace(
+        go.Scatter(
+            x=[ci_a[0], ci_a[1]],
+            y=[1, 1],
+            mode="lines",
+            line=dict(width=10),
+            name=f"A CI {(1-alpha)*100:.0f}%",
+            hovertemplate="A: %{x:.2%}<extra></extra>",
+        )
+    )
+    fig.add_trace(
+        go.Scatter(
+            x=[ci_b[0], ci_b[1]],
+            y=[0, 0],
+            mode="lines",
+            line=dict(width=10),
+            name=f"B CI {(1-alpha)*100:.0f}%",
+            hovertemplate="B: %{x:.2%}<extra></extra>",
+        )
+    )
     fig.update_layout(
-        title=f'{(1-alpha)*100:.0f}% Confidence Intervals',
-        xaxis_title='Conversion Rate',
-        yaxis=dict(tickmode='array', tickvals=[0,1], ticktext=['B','A']),
-        margin=dict(l=40, r=20, t=50, b=40)
+        title=f"{(1-alpha)*100:.0f}% Confidence Intervals",
+        xaxis_title="Conversion Rate",
+        yaxis=dict(tickmode="array", tickvals=[0, 1], ticktext=["B", "A"]),
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
+
 
 def plot_power_curve(p1, alpha, power):
     """Возвращает график требуемого размера выборки от конверсии B."""
@@ -296,6 +320,7 @@ def plot_power_curve(p1, alpha, power):
     )
     return fig
 
+
 def plot_bootstrap_distribution(users_a, conv_a, users_b, conv_b, iterations=5000):
     """
     Возвращает Plotly-гистограмму бутстрап-разницы (B−A).
@@ -307,28 +332,37 @@ def plot_bootstrap_distribution(users_a, conv_a, users_b, conv_b, iterations=500
     diffs = samp_b - samp_a
 
     fig = go.Figure()
-    fig.add_trace(go.Histogram(
-        x=diffs, nbinsx=50, histnorm='probability',
-        hovertemplate='%{x:.2%}<br>%{y:.1%}<extra></extra>'
-    ))
-    fig.add_vline(x=0, line_dash='dash', line_color='black')
+    fig.add_trace(
+        go.Histogram(
+            x=diffs,
+            nbinsx=50,
+            histnorm="probability",
+            hovertemplate="%{x:.2%}<br>%{y:.1%}<extra></extra>",
+        )
+    )
+    fig.add_vline(x=0, line_dash="dash", line_color="black")
     fig.update_layout(
-        title='Bootstrap Distribution of Δ (B−A)',
-        xaxis_title='Difference in CR',
-        yaxis_title='Probability',
-        margin=dict(l=40, r=20, t=50, b=40)
+        title="Bootstrap Distribution of Δ (B−A)",
+        xaxis_title="Difference in CR",
+        yaxis_title="Probability",
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
+
 
 def save_plot():
     """Сохраняет последнюю Matplotlib фигуру (если используется)."""
     import matplotlib.pyplot as plt
-    path, _ = QFileDialog.getSaveFileName(None, "Save plot", "", "PNG Files (*.png);;PDF Files (*.pdf)")
+
+    path, _ = QFileDialog.getSaveFileName(
+        None, "Save plot", "", "PNG Files (*.png);;PDF Files (*.pdf)"
+    )
     if path:
         plt.savefig(path)
 
 
 # --------- Additional Methods ---------
+
 
 def cuped_adjustment(x, covariate):
     """Return CUPED-adjusted metric array."""
@@ -348,7 +382,9 @@ def srm_check(users_a, users_b, alpha=0.05):
     """Simple SRM check using chi-square test."""
     total = users_a + users_b
     expected = total / 2
-    chi_sq = ((users_a - expected) ** 2) / expected + ((users_b - expected) ** 2) / expected
+    chi_sq = ((users_a - expected) ** 2) / expected + (
+        (users_b - expected) ** 2
+    ) / expected
     p = 1 - chi2.cdf(chi_sq, df=1)
     return p < alpha, p
 
@@ -363,8 +399,10 @@ def pocock_alpha_curve(alpha, looks):
 def ucb1(values, counts):
     """Return index of arm to select using UCB1."""
     t = sum(counts) + 1
-    ucb_values = [v / c + math.sqrt(2 * math.log(t) / c) if c > 0 else float('inf')
-                  for v, c in zip(values, counts)]
+    ucb_values = [
+        v / c + math.sqrt(2 * math.log(t) / c) if c > 0 else float("inf")
+        for v, c in zip(values, counts)
+    ]
     return int(np.argmax(ucb_values))
 
 
@@ -385,13 +423,25 @@ def plot_alpha_spending(alpha, looks):
     ]
     fig = go.Figure()
     fig.add_trace(
-        go.Scatter(x=list(range(1, looks + 1)), y=pocock, mode="lines+markers", name="Pocock")
+        go.Scatter(
+            x=list(range(1, looks + 1)), y=pocock, mode="lines+markers", name="Pocock"
+        )
     )
     fig.add_trace(
-        go.Scatter(x=list(range(1, looks + 1)), y=obf, mode="lines+markers", name="O'Brien-Fleming")
+        go.Scatter(
+            x=list(range(1, looks + 1)),
+            y=obf,
+            mode="lines+markers",
+            name="O'Brien-Fleming",
+        )
     )
     fig.update_layout(
-        title="Alpha Spending", xaxis_title="Look", yaxis_title="Alpha", margin=dict(l=40, r=20, t=50, b=40)
+        title="Alpha Spending",
+        xaxis_title="Look",
+        yaxis_title="Alpha",
+        margin=dict(l=40, r=20, t=50, b=40),
+        dragmode="zoom",
+        hovermode="x unified",
     )
     return fig
 
@@ -404,8 +454,7 @@ def segment_data(records, **filters):
 def compute_custom_metric(records, expression):
     """Evaluate expression like 'sum(conv)/sum(users)' on record list."""
     env = {
-        'sum': lambda field: sum(float(r.get(field, 0)) for r in records),
-        'len': lambda _: len(records)
+        "sum": lambda field: sum(float(r.get(field, 0)) for r in records),
+        "len": lambda _: len(records),
     }
     return eval(expression, {}, env)
-

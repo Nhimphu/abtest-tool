@@ -48,7 +48,7 @@ from logic import (
     cuped_adjustment,
     srm_check,
     ucb1,
-    epsilon_greedy
+    epsilon_greedy,
 )
 from i18n import i18n, detect_language
 from flags import FeatureFlagStore
@@ -145,7 +145,7 @@ class ABTestWindow(QMainWindow):
         self.flag_store = FeatureFlagStore()
         self.flags_window = None
 
-        self.setWindowTitle(self.i18n[self.lang]['title'])
+        self.setWindowTitle(self.i18n[self.lang]["title"])
         self.setGeometry(100, 100, 1000, 800)
 
         # Инициализируем историю
@@ -164,15 +164,17 @@ class ABTestWindow(QMainWindow):
     # ————— История (SQLite) —————
 
     def _init_history_db(self):
-        self.conn = sqlite3.connect('history.db')
+        self.conn = sqlite3.connect("history.db")
         c = self.conn.cursor()
-        c.execute('''
+        c.execute(
+            """
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT,
                 test TEXT,
                 result TEXT
-            )''')
+            )"""
+        )
         self.conn.commit()
 
     def _load_history(self):
@@ -196,7 +198,7 @@ class ABTestWindow(QMainWindow):
         c = self.conn.cursor()
         c.execute(
             "INSERT INTO history(timestamp,test,result) VALUES(?,?,?)",
-            (ts, name, content.replace("<pre>", "").replace("</pre>", ""))
+            (ts, name, content.replace("<pre>", "").replace("</pre>", "")),
         )
         self.conn.commit()
         rec_id = c.lastrowid
@@ -208,8 +210,10 @@ class ABTestWindow(QMainWindow):
         self.history_table.setItem(r, 0, chk)
         self.history_table.setItem(r, 1, QTableWidgetItem(ts))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
-        self.history_table.setItem(r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", "")))
-        if not hasattr(self, 'undo_stack'):
+        self.history_table.setItem(
+            r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", ""))
+        )
+        if not hasattr(self, "undo_stack"):
             self.undo_stack = []
         self.undo_stack.append(self.results_text.toHtml())
 
@@ -228,28 +232,32 @@ class ABTestWindow(QMainWindow):
         self.history_table.setRowCount(0)
 
     def _export_history_csv(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save History CSV", "", "CSV Files (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save History CSV", "", "CSV Files (*.csv)"
+        )
         if not path:
             return
         c = self.conn.cursor()
         c.execute("SELECT timestamp,test,result FROM history ORDER BY id")
         rows = c.fetchall()
         try:
-            with open(path, 'w', newline='', encoding='utf-8') as f:
+            with open(path, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
-                w.writerow(['Timestamp', 'Test', 'Result'])
+                w.writerow(["Timestamp", "Test", "Result"])
                 w.writerows(rows)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
 
     def _export_history_excel(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save History Excel", "", "Excel Files (*.xlsx)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save History Excel", "", "Excel Files (*.xlsx)"
+        )
         if not path:
             return
         df = pd.read_sql_query(
             "SELECT timestamp AS Timestamp, test AS Test, result AS Result FROM history ORDER BY id",
-            self.conn
+            self.conn,
         )
         try:
             df.to_excel(path, index=False)
@@ -330,40 +338,40 @@ class ABTestWindow(QMainWindow):
 
         # ROI
         self.revenue_per_user_label = QLabel()
-        self.revenue_per_user_var   = QLineEdit("50")
+        self.revenue_per_user_var = QLineEdit("50")
         self.revenue_per_user_var.setValidator(QDoubleValidator(0, 1e9, 2))
-        self.traffic_cost_label     = QLabel()
-        self.traffic_cost_var       = QLineEdit("10")
+        self.traffic_cost_label = QLabel()
+        self.traffic_cost_var = QLineEdit("10")
         self.traffic_cost_var.setValidator(QDoubleValidator(0, 1e9, 2))
-        self.budget_label           = QLabel()
-        self.budget_var             = QLineEdit("10000")
+        self.budget_label = QLabel()
+        self.budget_var = QLineEdit("10000")
         self.budget_var.setValidator(QDoubleValidator(0, 1e12, 2))
-        self.roi_button             = QPushButton()
+        self.roi_button = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
 
         # Segmentation & Custom metric
-        self.filter_device  = QLineEdit()
+        self.filter_device = QLineEdit()
         self.filter_country = QLineEdit()
-        self.filter_utm     = QLineEdit()
-        self.custom_metric  = QLineEdit("sum('conv')/sum('users')")
+        self.filter_utm = QLineEdit()
+        self.custom_metric = QLineEdit("sum('conv')/sum('users')")
 
-        self.undo_button = QPushButton('Undo')
+        self.undo_button = QPushButton("Undo")
         self.undo_button.clicked.connect(self.undo)
-        self.redo_button = QPushButton('Redo')
+        self.redo_button = QPushButton("Redo")
         self.redo_button.clicked.connect(self.redo)
-        self.share_button = QPushButton('Share')
+        self.share_button = QPushButton("Share")
         self.share_button.clicked.connect(self.share_session)
 
         # Графики
-        self.plot_ci_button       = QPushButton()
+        self.plot_ci_button = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
-        self.plot_power_button    = QPushButton()
+        self.plot_power_button = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
-        self.plot_alpha_button    = QPushButton()
+        self.plot_alpha_button = QPushButton()
         self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
-        self.save_plot_button     = QPushButton()
+        self.save_plot_button = QPushButton()
         self.save_plot_button.clicked.connect(save_plot)
 
         # Результаты
@@ -373,11 +381,13 @@ class ABTestWindow(QMainWindow):
         self.pre_exp_data = None
         self.load_pre_exp_button = QPushButton()
         self.load_pre_exp_button.clicked.connect(self.load_pre_experiment_data)
-        self.clear_button        = QPushButton()
-        self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
+        self.clear_button = QPushButton()
+        self.clear_button.clicked.connect(
+            lambda: self.results_text.setHtml("<pre></pre>")
+        )
 
         # История
-        self.history_table      = QTableWidget(0, 4)
+        self.history_table = QTableWidget(0, 4)
         self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат"])
         self.history_table.setSortingEnabled(True)
         self.del_selected_button = QPushButton()
@@ -455,7 +465,7 @@ class ABTestWindow(QMainWindow):
             self.plot_power_button,
             self.plot_alpha_button,
             self.plot_bootstrap_button,
-            self.save_plot_button
+            self.save_plot_button,
         ]:
             btns.addWidget(btn)
         right.addLayout(btns)
@@ -473,10 +483,7 @@ class ABTestWindow(QMainWindow):
         right.addLayout(seg)
 
         btns2 = QHBoxLayout()
-        for btn in [
-            self.load_pre_exp_button,
-            self.clear_button
-        ]:
+        for btn in [self.load_pre_exp_button, self.clear_button]:
             btns2.addWidget(btn)
         right.addLayout(btns2)
 
@@ -506,33 +513,32 @@ class ABTestWindow(QMainWindow):
         L = self.i18n[self.lang]
         mb = self.menuBar()
         # File / Файл
-        fm = mb.addMenu(L['file'])
+        fm = mb.addMenu(L["file"])
         fm.addSeparator()
-        a3 = QAction(L['export_pdf'], self)
+        a3 = QAction(L["export_pdf"], self)
         a3.triggered.connect(self.export_pdf)
         fm.addAction(a3)
-        a4 = QAction(L['export_excel'], self)
+        a4 = QAction(L["export_excel"], self)
         a4.triggered.connect(self.export_excel)
         fm.addAction(a4)
-        a5 = QAction(L['export_csv'], self)
+        a5 = QAction(L["export_csv"], self)
         a5.triggered.connect(self.export_csv)
         fm.addAction(a5)
-        md = QAction('Export MD', self)
+        md = QAction("Export MD", self)
         md.triggered.connect(self.export_markdown)
         fm.addAction(md)
-        nb = QAction('Export Notebook', self)
+        nb = QAction("Export Notebook", self)
         nb.triggered.connect(self.export_notebook)
         fm.addAction(nb)
-        ff = QAction('Feature Flags', self)
+        ff = QAction("Feature Flags", self)
         ff.triggered.connect(self.show_flags_editor)
         fm.addAction(ff)
 
         # Tutorial / Справка
-        hm = mb.addMenu(L['tutorial'])
-        tut = QAction(L['tutorial'], self)
+        hm = mb.addMenu(L["tutorial"])
+        tut = QAction(L["tutorial"], self)
         tut.triggered.connect(self.show_tutorial)
         hm.addAction(tut)
-
 
         # Language switch
         cw = QWidget()
@@ -563,19 +569,27 @@ class ABTestWindow(QMainWindow):
 
     def update_ui_text(self):
         L = self.i18n[self.lang]
-        self.setWindowTitle(L['title'])
-        self.tab_widget.setTabText(0, L['main'])
-        self.tab_widget.setTabText(1, L['history'])
+        self.setWindowTitle(L["title"])
+        self.tab_widget.setTabText(0, L["main"])
+        self.tab_widget.setTabText(1, L["history"])
 
         # Слайдерные лейблы
         g = self.baseline_slider.parentWidget().layout()
-        g.itemAt(0).widget().setText(f"{L['baseline']} {self.baseline_slider.value()/10:.1f}%")
-        g.itemAt(2).widget().setText(f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%")
-        g.itemAt(4).widget().setText(f"{L['alpha']} {self.alpha_slider.value()/100:.2f}")
-        g.itemAt(6).widget().setText(f"{L['power']} {self.power_slider.value()/100:.2f}")
+        g.itemAt(0).widget().setText(
+            f"{L['baseline']} {self.baseline_slider.value()/10:.1f}%"
+        )
+        g.itemAt(2).widget().setText(
+            f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%"
+        )
+        g.itemAt(4).widget().setText(
+            f"{L['alpha']} {self.alpha_slider.value()/100:.2f}"
+        )
+        g.itemAt(6).widget().setText(
+            f"{L['power']} {self.power_slider.value()/100:.2f}"
+        )
 
         # Кнопки и поля
-        self.calc_button.setText(L['calculate_sample_size'])
+        self.calc_button.setText(L["calculate_sample_size"])
         for G in ["A", "B", "C"]:
             getattr(self, f"users_{G}_label").setText(
                 f"{G} – {'Пользователи' if self.lang=='RU' else 'Users'}:"
@@ -583,46 +597,48 @@ class ABTestWindow(QMainWindow):
             getattr(self, f"conv_{G}_label").setText(
                 f"{G} – {'Конверсии' if self.lang=='RU' else 'Conversions'}:"
             )
-        self.analyze_button.setText(L['analyze_ab'])
-        self.conf_button.setText(L['confidence_intervals'])
-        self.bayes_button.setText(L['bayesian_analysis'])
-        self.bandit_label.setText('Bandit:')
-        self.aa_button.setText(L['aa_testing'])
-        self.seq_button.setText(L['sequential_testing'])
-        self.obf_button.setText(L['obrien_fleming'])
-        self.revenue_per_user_label.setText(L['revenue_per_user'])
-        self.traffic_cost_label.setText(L['traffic_cost'])
-        self.budget_label.setText(L['budget'])
-        self.roi_button.setText(L['calculate_roi'])
-        self.load_pre_exp_button.setText(L['pre_exp_data'])
-        self.clear_button.setText(L['clear_results'])
-        self.plot_ci_button.setText(L['confidence_intervals'])
-        self.plot_power_button.setText(L['power_curve'])
-        self.plot_alpha_button.setText('α-spending')
-        self.plot_bootstrap_button.setText(L['bootstrap'])
-        self.save_plot_button.setText(L['save_plot'])
-        self.del_selected_button.setText(L['delete_selected'])
-        self.clear_history_button.setText(L['clear_history'])
-        self.filter_device.setPlaceholderText('mobile/desktop')
-        self.filter_country.setPlaceholderText('US')
-        self.filter_utm.setPlaceholderText('campaign')
+        self.analyze_button.setText(L["analyze_ab"])
+        self.conf_button.setText(L["confidence_intervals"])
+        self.bayes_button.setText(L["bayesian_analysis"])
+        self.bandit_label.setText("Bandit:")
+        self.aa_button.setText(L["aa_testing"])
+        self.seq_button.setText(L["sequential_testing"])
+        self.obf_button.setText(L["obrien_fleming"])
+        self.revenue_per_user_label.setText(L["revenue_per_user"])
+        self.traffic_cost_label.setText(L["traffic_cost"])
+        self.budget_label.setText(L["budget"])
+        self.roi_button.setText(L["calculate_roi"])
+        self.load_pre_exp_button.setText(L["pre_exp_data"])
+        self.clear_button.setText(L["clear_results"])
+        self.plot_ci_button.setText(L["confidence_intervals"])
+        self.plot_power_button.setText(L["power_curve"])
+        self.plot_alpha_button.setText("α-spending")
+        self.plot_bootstrap_button.setText(L["bootstrap"])
+        self.save_plot_button.setText(L["save_plot"])
+        self.del_selected_button.setText(L["delete_selected"])
+        self.clear_history_button.setText(L["clear_history"])
+        self.filter_device.setPlaceholderText("mobile/desktop")
+        self.filter_country.setPlaceholderText("US")
+        self.filter_utm.setPlaceholderText("campaign")
         self.custom_metric.setToolTip("e.g., sum('conv')/sum('users')")
 
     # ————— Обработчики —————
 
     def calculate_sample_size(self):
         try:
-            p1     = self.baseline_slider.value()/1000
-            uplift = self.uplift_slider.value()/1000
-            alpha  = self.alpha_slider.value()/100
-            power  = self.power_slider.value()/100
-            p2     = p1*(1+uplift)
-            n      = required_sample_size(p1, p2, alpha, power)
-            mde    = calculate_mde(n, alpha, power, p1)
-            html = (f"<pre>CR A={p1:.2%}, CR B={p2:.2%}\n"
-                    f"α={alpha:.2f}, Power={power:.2f}\n\n"
-                    f"Size/group: {n}\n"
-                    f"MDE: {mde:.2%}</pre>")
+            p1 = self.baseline_slider.value() / 1000
+            uplift = self.uplift_slider.value() / 1000
+            alpha = self.alpha_slider.value() / 100
+            power = self.power_slider.value() / 100
+            p2 = p1 * (1 + uplift)
+            n = required_sample_size(p1, p2, alpha, power)
+            mde = calculate_mde(n, alpha, power, p1)
+            html = (
+                f"<pre>CR A={p1:.2%}, CR B={p2:.2%}\n"
+                f"α={alpha:.2f}, Power={power:.2f}\n\n"
+                f"Size/group: {n}\n"
+                f"MDE: {mde:.2%}</pre>"
+            )
             self.results_text.setHtml(html)
             self._add_history("Sample Size", html)
         except Exception as e:
@@ -633,36 +649,41 @@ class ABTestWindow(QMainWindow):
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
-            alpha  = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
+            srm_flag, p_srm = srm_check(ua, ub)
+            if srm_flag:
+                QMessageBox.warning(self, "SRM", f"SRM p={p_srm:.3f}")
             if self.pre_exp_data:
                 conv, cov = self.pre_exp_data
                 adj = cuped_adjustment(conv, cov)
                 ca = int(sum(adj[:ua]))
-                cb = int(sum(adj[ua:ua+ub]))
-            if getattr(self, 'records', None):
+                cb = int(sum(adj[ua : ua + ub]))
+            if getattr(self, "records", None):
                 recs = self.records
                 filt = {}
                 if self.filter_device.text():
-                    filt['device'] = self.filter_device.text()
+                    filt["device"] = self.filter_device.text()
                 if self.filter_country.text():
-                    filt['country'] = self.filter_country.text()
+                    filt["country"] = self.filter_country.text()
                 if self.filter_utm.text():
-                    filt['utm'] = self.filter_utm.text()
+                    filt["utm"] = self.filter_utm.text()
                 if filt:
                     recs = segment_data(recs, **filt)
                 metric = compute_custom_metric(recs, self.custom_metric.text())
-            res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
-            srm_flag, p_srm = srm_check(ua, ub)
-            metric_val = locals().get('metric', None)
+            res = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
+            metric_val = locals().get("metric", None)
             rec_arm = self._recommend_bandit(ca, ua, cb, ub)
-            html   = (f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
-                      f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
-                      f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
-                      f"P(A vs B)={res['p_value_ab']:.4f}\n"
-                      f"Winner: {res['winner']}\n"
-                      f"SRM p={p_srm:.3f}{' ⚠' if srm_flag else ''}\n"
-                      f"Metric={metric_val:.4f}" if metric_val is not None else ""
-                      f"\nNext arm: {rec_arm}</pre>")
+            html = (
+                f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
+                f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
+                f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
+                f"P(A vs B)={res['p_value_ab']:.4f}\n"
+                f"Winner: {res['winner']}\n"
+                f"SRM p={p_srm:.3f}{' ⚠' if srm_flag else ''}\n"
+                f"Metric={metric_val:.4f}"
+                if metric_val is not None
+                else "" f"\nNext arm: {rec_arm}</pre>"
+            )
             self.results_text.setHtml(html)
             self._add_history("A/B/n Test", html)
         except Exception as e:
@@ -672,27 +693,27 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            alpha  = self.alpha_slider.value()/100
-            fig    = plot_confidence_intervals(ua, ca, ub, cb, alpha)
-            w      = PlotWindow(self)
+            alpha = self.alpha_slider.value() / 100
+            fig = plot_confidence_intervals(ua, ca, ub, cb, alpha)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
     def _on_plot_power_curve(self):
         try:
-            p1    = self.baseline_slider.value()/1000
-            alpha = self.alpha_slider.value()/100
-            pw    = self.power_slider.value()/100
-            fig   = plot_power_curve(p1, alpha, pw)
-            w     = PlotWindow(self)
+            p1 = self.baseline_slider.value() / 1000
+            alpha = self.alpha_slider.value() / 100
+            pw = self.power_slider.value() / 100
+            fig = plot_power_curve(p1, alpha, pw)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
     def _on_plot_alpha_spending(self):
         try:
-            alpha = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
             fig = plot_alpha_spending(alpha, looks=5)
             w = PlotWindow(self)
             w.display_plot(fig)
@@ -703,8 +724,8 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            fig    = plot_bootstrap_distribution(ua, ca, ub, cb)
-            w      = PlotWindow(self)
+            fig = plot_bootstrap_distribution(ua, ca, ub, cb)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
@@ -713,25 +734,25 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            a0     = self.prior_alpha_spin.value()
-            b0     = self.prior_beta_spin.value()
+            a0 = self.prior_alpha_spin.value()
+            b0 = self.prior_beta_spin.value()
             prob, x, pa, pb = bayesian_analysis(a0, b0, ua, ca, ub, cb)
             html = f"<pre>P(B>A) = {prob:.2%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("Bayesian Analysis", html)
             fig = plot_bayesian_posterior(a0, b0, ua, ca, ub, cb)
-            w   = PlotWindow(self)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
     def _on_run_aa(self):
         try:
-            p     = self.baseline_slider.value()/1000
-            n     = int(self.users_A_var.text()) + int(self.users_B_var.text())
-            alpha = self.alpha_slider.value()/100
-            fpr   = run_aa_simulation(p, n, alpha)
-            html  = f"<pre>Exp FPR: {alpha:.1%}, Actual FPR: {fpr:.1%}</pre>"
+            p = self.baseline_slider.value() / 1000
+            n = int(self.users_A_var.text()) + int(self.users_B_var.text())
+            alpha = self.alpha_slider.value() / 100
+            fpr = run_aa_simulation(p, n, alpha)
+            html = f"<pre>Exp FPR: {alpha:.1%}, Actual FPR: {fpr:.1%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("A/A Test", html)
         except Exception as e:
@@ -741,7 +762,7 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            alpha  = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
             steps, pa = run_sequential_analysis(ua, ca, ub, cb, alpha)
             txt = f"<pre>Pocock α={pa:.4f}\n"
             for i, r in enumerate(steps, 1):
@@ -750,7 +771,7 @@ class ABTestWindow(QMainWindow):
             self.results_text.setHtml(txt)
             self._add_history("Sequential Analysis", txt)
             if len(steps) < 5:
-                send_webhook('http://example.com', 'Sequential test stopped early')
+                send_webhook("http://example.com", "Sequential test stopped early")
         except Exception as e:
             show_error(self, str(e))
 
@@ -758,7 +779,7 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            alpha  = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
             steps = run_obrien_fleming(ua, ca, ub, cb, alpha)
             txt = "<pre>O'Brien-Fleming\n"
             for i, r in enumerate(steps, 1):
@@ -770,7 +791,7 @@ class ABTestWindow(QMainWindow):
             self.results_text.setHtml(txt)
             self._add_history("OBrien-Fleming", txt)
             if len(steps) < 5:
-                send_webhook('http://example.com', 'OBF test stopped early')
+                send_webhook("http://example.com", "OBF test stopped early")
         except Exception as e:
             show_error(self, str(e))
 
@@ -779,8 +800,8 @@ class ABTestWindow(QMainWindow):
             rpu = float(self.revenue_per_user_var.text())
             cost = float(self.traffic_cost_var.text())
             bud = float(self.budget_var.text())
-            p1 = self.baseline_slider.value()/1000
-            up = self.uplift_slider.value()/1000
+            p1 = self.baseline_slider.value() / 1000
+            up = self.uplift_slider.value() / 1000
             u, br, nr, pf, ro = calculate_roi(rpu, cost, bud, p1, up)
             html = (
                 f"<pre>Users: {u:.0f}\n"
@@ -794,16 +815,15 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
-
     def show_tutorial(self):
         QMessageBox.information(
             self,
-            self.i18n[self.lang]['tutorial'],
+            self.i18n[self.lang]["tutorial"],
             "🔹 Слайдеры CR, uplift, α, power\n"
             "🔹 Поля A/B/C\n"
             "🔹 Bayesian с priors\n"
             "🔹 ROI встроен\n"
-            "🔹 История с экспортом"
+            "🔹 История с экспортом",
         )
 
     def toggle_language(self):
@@ -845,7 +865,7 @@ class ABTestWindow(QMainWindow):
             show_error(self, str(e))
 
     def undo(self):
-        if hasattr(self, 'undo_stack') and self.undo_stack:
+        if hasattr(self, "undo_stack") and self.undo_stack:
             state = self.undo_stack.pop()
             self.results_text.setHtml(state)
 
@@ -873,15 +893,13 @@ class ABTestWindow(QMainWindow):
 
     # ————— Сессионные функции и экспорт результатов —————
 
-
     def export_pdf(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save PDF", "", "PDF Files (*.pdf)"
-        )
+        path, _ = QFileDialog.getSaveFileName(self, "Save PDF", "", "PDF Files (*.pdf)")
         if not path:
             return
         try:
-            utils.export_pdf(self.results_text.toPlainText(), path)
+            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            utils.export_pdf(sections, path)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
@@ -900,9 +918,7 @@ class ABTestWindow(QMainWindow):
             show_error(self, str(e))
 
     def export_csv(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save CSV", "", "CSV Files (*.csv)"
-        )
+        path, _ = QFileDialog.getSaveFileName(self, "Save CSV", "", "CSV Files (*.csv)")
         if not path:
             return
         try:

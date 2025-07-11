@@ -16,9 +16,10 @@ pytest -q
 
 - CUPED adjustment and SRM check helpers
 - Simple alpha-spending curve generation
-- Interactive α-spending plots in the UI
+- Interactive α-spending plots in the UI (zoomable)
 - Markdown export utility
 - Notebook export utility
+- Template PDF/Notebook reports
 - Basic API to run A/B analyses (`analysis_api.py`)
 - Use `curl -X POST -H 'Content-Type: application/json' -d '{"users_a":100, "conv_a":10, "users_b":100, "conv_b":15}' http://localhost:5000/abtest` to call the API
 - Bandit helpers: UCB1 and epsilon-greedy
@@ -32,5 +33,5 @@ pytest -q
 - Export to Markdown and Notebook, plus PDF template
 - Basic collaboration tools (undo/redo/share)
 - JSON-based translations with auto language detection
-- CI pipeline runs tests with coverage and pre-commit hooks
+- CI pipeline runs tests with coverage and pre-commit (black, flake8, bandit)
 
