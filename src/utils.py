@@ -72,9 +72,11 @@ def export_markdown(sections, filepath):
 
 
 def export_notebook(sections, filepath):
-    """Export results to a minimal Jupyter notebook file."""
+    """Export results following the notebook template."""
+    order = ["Описание", "Результаты", "Визуализации", "Интерпретация"]
     cells = []
-    for name, lines in sections.items():
+    for name in order:
+        lines = sections.get(name, [])
         cell = {
             "cell_type": "markdown",
             "metadata": {},

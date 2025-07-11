@@ -176,6 +176,12 @@ def test_export_notebook_invokes_util(monkeypatch):
     dummy = types.SimpleNamespace(results_text=types.SimpleNamespace(toPlainText=lambda: 'line1\nline2'))
     ABTestWindow.export_notebook(dummy)
 
-    assert recorded.get('args') == ({'Results': ['line1', 'line2']}, 'out.ipynb')
+    expected = {
+        'Описание': [],
+        'Результаты': ['line1', 'line2'],
+        'Визуализации': [],
+        'Интерпретация': [],
+    }
+    assert recorded.get('args') == (expected, 'out.ipynb')
 
 

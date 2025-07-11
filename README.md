@@ -23,6 +23,7 @@ pytest -q
 - Feature flag API with an in-memory store (`flags_api.py`)
 - Bandit helpers: UCB1 and epsilon-greedy
 - Webhook helper for early stop notifications
+- Sequential analysis functions accept a `webhook_url` parameter
 - Light/Dark theme toggle and sortable history table
 - Simple segmentation helpers and custom metric expressions
 

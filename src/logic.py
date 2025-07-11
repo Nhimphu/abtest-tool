@@ -3,6 +3,7 @@ import numpy as np
 from scipy.stats import norm, beta, chi2
 import plotly.graph_objects as go
 from PyQt6.QtWidgets import QFileDialog
+from webhooks import send_webhook
 
 def required_sample_size(p1, p2, alpha, power):
     """Размер выборки на группу (двусторонний тест разности пропорций)."""
@@ -184,9 +185,11 @@ def evaluate_abn_test(
     res["significant_fdr"] = p_adj < alpha
     return res
 
-def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
-    """
-    Последовательный Pocock: возвращает (steps, pocock_alpha).
+def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5, webhook_url=None):
+    """Sequential Pocock method.
+
+    When ``webhook_url`` is provided, a POST notification is sent if the
+    test stops early.
     """
     pocock_alpha = alpha * (1 - (1 - 0.5**(1/looks)) / (1 - 0.5))
     steps = []
@@ -200,10 +203,15 @@ def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5):
         res = _evaluate_abn_test(na, ca_i, nb, cb_i, alpha=pocock_alpha)
         steps.append(res)
         if res['p_value_ab'] < pocock_alpha:
+            if webhook_url:
+                send_webhook(
+                    webhook_url,
+                    f"Sequential test stopped at look {i} p={res['p_value_ab']:.4f}",
+                )
             break
     return steps, pocock_alpha
 
-def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5):
+def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5, webhook_url=None):
     """Sequential O'Brien-Fleming method.
 
     Returns list of step results with per-look threshold.
@@ -226,6 +234,11 @@ def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5):
         res["threshold"] = thr
         steps.append(res)
         if res["p_value_ab"] < thr:
+            if webhook_url:
+                send_webhook(
+                    webhook_url,
+                    f"OBF test stopped at look {i} p={res['p_value_ab']:.4f}",
+                )
             break
     return steps
 
