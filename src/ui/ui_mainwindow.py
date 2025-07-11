@@ -29,6 +29,11 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
 from PyQt6.QtCore import Qt, QDateTime
 
+try:  # Optional dependency
+    from PyQt6.QtWebEngineWidgets import QWebEngineView  # type: ignore
+except Exception:  # pragma: no cover - optional
+    QWebEngineView = None
+
 from stats.ab_test import (
     required_sample_size,
     calculate_mde,
@@ -332,6 +337,28 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
+    def _save_current_plot(self):
+        if not self._last_fig:
+            QMessageBox.information(self, "Info", "No plot to save")
+            return
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Plot", "", "HTML Files (*.html)"
+        )
+        if not path:
+            return
+        try:
+            import plotly.io as pio
+
+            pio.write_html(
+                self._last_fig,
+                file=path,
+                auto_open=False,
+                include_plotlyjs="cdn",
+            )
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:  # pragma: no cover - file errors
+            show_error(self, str(e))
+
     # ————— Подготовка виджетов —————
 
     def _prepare_widgets(self):
@@ -443,8 +470,15 @@ class ABTestWindow(QMainWindow):
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
         self.plot_bootstrap_button.setToolTip("Bootstrap distribution")
         self.save_plot_button     = QPushButton()
-        self.save_plot_button.clicked.connect(save_plot)
+        self.save_plot_button.clicked.connect(self._save_current_plot)
         self.save_plot_button.setToolTip("Save last plot")
+
+        # Area to embed Plotly plots if QtWebEngine is available
+        self._last_fig = None
+        self.alpha_plot_view = QWebEngineView() if QWebEngineView else None
+        if self.alpha_plot_view:
+            self.alpha_plot_view.setZoomFactor(1.0)
+            self.alpha_plot_view.setVisible(False)
 
         # Результаты
         self.results_text = QTextBrowser()
@@ -545,6 +579,8 @@ class ABTestWindow(QMainWindow):
         ]:
             btns.addWidget(btn)
         right.addLayout(btns)
+        if self.alpha_plot_view:
+            right.addWidget(self.alpha_plot_view)
         right.addWidget(self.results_text)
 
         btns2 = QHBoxLayout()
@@ -749,6 +785,7 @@ class ABTestWindow(QMainWindow):
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             alpha  = self.alpha_slider.value()/100
             fig    = plot_confidence_intervals(ua, ca, ub, cb, alpha)
+            self._last_fig = fig
             w      = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
@@ -760,6 +797,7 @@ class ABTestWindow(QMainWindow):
             alpha = self.alpha_slider.value()/100
             pw    = self.power_slider.value()/100
             fig   = plot_power_curve(p1, alpha, pw)
+            self._last_fig = fig
             w     = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
@@ -769,8 +807,15 @@ class ABTestWindow(QMainWindow):
         try:
             alpha = self.alpha_slider.value()/100
             fig = plot_alpha_spending(alpha, looks=5)
-            w = PlotWindow(self)
-            w.display_plot(fig)
+            self._last_fig = fig
+            if self.alpha_plot_view:
+                import plotly.io as pio
+                html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
+                self.alpha_plot_view.setHtml(html)
+                self.alpha_plot_view.setVisible(True)
+            else:
+                w = PlotWindow(self)
+                w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
@@ -779,6 +824,7 @@ class ABTestWindow(QMainWindow):
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             fig    = plot_bootstrap_distribution(ua, ca, ub, cb)
+            self._last_fig = fig
             w      = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
@@ -795,6 +841,7 @@ class ABTestWindow(QMainWindow):
             self.results_text.setHtml(html)
             self._add_history("Bayesian Analysis", html)
             fig = plot_bayesian_posterior(a0, b0, ua, ca, ub, cb)
+            self._last_fig = fig
             w   = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
@@ -809,6 +856,7 @@ class ABTestWindow(QMainWindow):
             html  = f"<pre>Exp FPR: {alpha:.1%}, Actual FPR: {fpr:.1%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("A/A Test", html)
+            self._last_fig = None
         except Exception as e:
             show_error(self, str(e))
 
@@ -824,6 +872,7 @@ class ABTestWindow(QMainWindow):
             txt += "</pre>"
             self.results_text.setHtml(txt)
             self._add_history("Sequential Analysis", txt)
+            self._last_fig = None
         except Exception as e:
             show_error(self, str(e))
 
@@ -842,6 +891,7 @@ class ABTestWindow(QMainWindow):
             txt += "</pre>"
             self.results_text.setHtml(txt)
             self._add_history("OBrien-Fleming", txt)
+            self._last_fig = None
         except Exception as e:
             show_error(self, str(e))
 
