@@ -15,6 +15,9 @@ pytest -q
 
 ```
 
+OpenAPI спецификация доступна на `/spec`, интерактивная документация
+Swagger‑UI отображается по адресу `/docs`.
+
 -## Additional Features
 
 - CUPED adjustment and SRM check helpers (SRM warnings shown before analysis)
