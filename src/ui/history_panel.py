@@ -6,6 +6,8 @@ import json
 import sqlite3
 from typing import Any, Dict, List
 
+from migrations_runner import run_migrations
+
 try:
     from PyQt6.QtWidgets import (
         QWidget,
@@ -66,7 +68,7 @@ class HistoryPanel(QWidget):
     def __init__(self, conn: sqlite3.Connection | None = None, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.conn = conn or sqlite3.connect("history.db")
-        self._init_db()
+        run_migrations(self.conn)
 
         self._states: List[Dict[str, Any]] = []
         self._index: int = -1
@@ -98,17 +100,6 @@ class HistoryPanel(QWidget):
         self.load_states()
 
     # ----- database -----
-    def _init_db(self) -> None:
-        c = self.conn.cursor()
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS session_states (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                payload TEXT,
-                timestamp TEXT
-            )"""
-        )
-        self.conn.commit()
 
     def load_states(self) -> None:
         c = self.conn.cursor()

@@ -3,6 +3,8 @@ from typing import List, Optional
 import threading
 import sqlite3
 
+from migrations_runner import run_migrations
+
 @dataclass
 class FeatureFlag:
     """Represents a single feature flag."""
@@ -15,21 +17,8 @@ class FeatureFlagStore:
 
     def __init__(self, db_path: str = "flags.db"):
         self._lock = threading.Lock()
+        run_migrations(db_path)
         self._conn = sqlite3.connect(db_path, check_same_thread=False)
-        self._init_db()
-
-    def _init_db(self) -> None:
-        cur = self._conn.cursor()
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS flags (
-                name TEXT PRIMARY KEY,
-                enabled INTEGER NOT NULL,
-                rollout REAL NOT NULL
-            )
-            """
-        )
-        self._conn.commit()
 
     def create_flag(self, name: str, enabled: bool = False, rollout: float = 100.0) -> FeatureFlag:
         with self._lock:
