@@ -61,3 +61,27 @@ def export_csv(sections, filepath):
 def show_error(parent, message):
     QMessageBox.critical(parent, "Ошибка", message)
 
+
+def export_markdown(sections, filepath):
+    with open(filepath, 'w', encoding='utf-8') as f:
+        for name, lines in sections.items():
+            f.write(f"## {name}\n")
+            for line in lines:
+                f.write(f"{line}\n")
+            f.write("\n")
+
+
+def export_notebook(sections, filepath):
+    """Export results to a minimal Jupyter notebook file."""
+    cells = []
+    for name, lines in sections.items():
+        cell = {
+            "cell_type": "markdown",
+            "metadata": {},
+            "source": [f"## {name}\n"] + [line + "\n" for line in lines],
+        }
+        cells.append(cell)
+    nb = {"cells": cells, "metadata": {}, "nbformat": 4, "nbformat_minor": 2}
+    with open(filepath, "w", encoding="utf-8") as f:
+        json.dump(nb, f, ensure_ascii=False, indent=2)
+

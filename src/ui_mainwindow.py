@@ -23,6 +23,7 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QTextBrowser,
+    QComboBox,
 )
 from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
 from PyQt6.QtCore import Qt, QDateTime
@@ -42,7 +43,7 @@ from logic import (
     plot_bootstrap_distribution,
     save_plot
 )
-from i18n import i18n
+from i18n import i18n, detect_language
 import utils
 
 
@@ -71,7 +72,7 @@ class PlotWindow:
 class ABTestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.lang = "RU"
+        self.lang = detect_language()
         self.i18n = i18n
 
         self.setWindowTitle(self.i18n[self.lang]['title'])
@@ -250,6 +251,10 @@ class ABTestWindow(QMainWindow):
         self.prior_beta_spin.setSingleStep(0.1)
         self.prior_beta_spin.setValue(1.0)
 
+        self.bandit_label = QLabel()
+        self.bandit_combo = QComboBox()
+        self.bandit_combo.addItems(["Thompson", "UCB1", "ε-greedy"])
+
         # ROI
         self.revenue_per_user_label = QLabel()
         self.revenue_per_user_var   = QLineEdit("50")
@@ -268,6 +273,8 @@ class ABTestWindow(QMainWindow):
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
         self.plot_power_button    = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
+        self.plot_alpha_button    = QPushButton()
+        self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
         self.save_plot_button     = QPushButton()
@@ -285,6 +292,7 @@ class ABTestWindow(QMainWindow):
         # История
         self.history_table      = QTableWidget(0, 4)
         self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат"])
+        self.history_table.setSortingEnabled(True)
         self.del_selected_button = QPushButton()
         self.del_selected_button.clicked.connect(self._delete_selected_history)
         self.clear_history_button = QPushButton()
@@ -332,6 +340,8 @@ class ABTestWindow(QMainWindow):
         left.addWidget(QLabel("β-prior:"))
         left.addWidget(self.prior_beta_spin)
         left.addWidget(self.bayes_button)
+        left.addWidget(self.bandit_label)
+        left.addWidget(self.bandit_combo)
         left.addWidget(self.aa_button)
         left.addWidget(self.seq_button)
         left.addWidget(self.obf_button)
@@ -356,6 +366,7 @@ class ABTestWindow(QMainWindow):
         for btn in [
             self.plot_ci_button,
             self.plot_power_button,
+            self.plot_alpha_button,
             self.plot_bootstrap_button,
             self.save_plot_button
         ]:
@@ -403,6 +414,9 @@ class ABTestWindow(QMainWindow):
         a5 = QAction(L['export_csv'], self)
         a5.triggered.connect(self.export_csv)
         fm.addAction(a5)
+        nb = QAction('Export Notebook', self)
+        nb.triggered.connect(self.export_notebook)
+        fm.addAction(nb)
 
         # Tutorial / Справка
         hm = mb.addMenu(L['tutorial'])
@@ -420,12 +434,22 @@ class ABTestWindow(QMainWindow):
         self.lang_button.setFixedSize(30, 30)
         self.lang_button.clicked.connect(self.toggle_language)
         cl.addWidget(self.lang_button)
+        self.theme_button = QPushButton("☀")
+        self.theme_button.setFixedSize(30, 30)
+        self.theme_button.clicked.connect(self.toggle_theme)
+        cl.addWidget(self.theme_button)
         mb.setCornerWidget(cw, Qt.Corner.TopRightCorner)
 
     def apply_dark_theme(self):
         p = QPalette()
         p.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
         p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+        self.setPalette(p)
+
+    def apply_light_theme(self):
+        p = QPalette()
+        p.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
+        p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
         self.setPalette(p)
 
     def update_ui_text(self):
@@ -453,6 +477,7 @@ class ABTestWindow(QMainWindow):
         self.analyze_button.setText(L['analyze_ab'])
         self.conf_button.setText(L['confidence_intervals'])
         self.bayes_button.setText(L['bayesian_analysis'])
+        self.bandit_label.setText('Bandit:')
         self.aa_button.setText(L['aa_testing'])
         self.seq_button.setText(L['sequential_testing'])
         self.obf_button.setText(L['obrien_fleming'])
@@ -464,6 +489,7 @@ class ABTestWindow(QMainWindow):
         self.clear_button.setText(L['clear_results'])
         self.plot_ci_button.setText(L['confidence_intervals'])
         self.plot_power_button.setText(L['power_curve'])
+        self.plot_alpha_button.setText('α-spending')
         self.plot_bootstrap_button.setText(L['bootstrap'])
         self.save_plot_button.setText(L['save_plot'])
         self.del_selected_button.setText(L['delete_selected'])
@@ -524,6 +550,15 @@ class ABTestWindow(QMainWindow):
             pw    = self.power_slider.value()/100
             fig   = plot_power_curve(p1, alpha, pw)
             w     = PlotWindow(self)
+            w.display_plot(fig)
+        except Exception as e:
+            show_error(self, str(e))
+
+    def _on_plot_alpha_spending(self):
+        try:
+            alpha = self.alpha_slider.value()/100
+            fig = plot_alpha_spending(alpha, looks=5)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
@@ -635,6 +670,14 @@ class ABTestWindow(QMainWindow):
         self.lang = "EN" if self.lang == "RU" else "RU"
         self.update_ui_text()
 
+    def toggle_theme(self):
+        if self.palette().color(QPalette.ColorRole.Window) == QColor(53, 53, 53):
+            self.apply_light_theme()
+            self.theme_button.setText("☾")
+        else:
+            self.apply_dark_theme()
+            self.theme_button.setText("☀")
+
     # ————— Сессионные функции и экспорт результатов —————
 
 
@@ -672,6 +715,19 @@ class ABTestWindow(QMainWindow):
         try:
             sections = {"Results": self.results_text.toPlainText().splitlines()}
             utils.export_csv(sections, path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
+
+    def export_notebook(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Notebook", "", "Notebook Files (*.ipynb)"
+        )
+        if not path:
+            return
+        try:
+            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            utils.export_notebook(sections, path)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
