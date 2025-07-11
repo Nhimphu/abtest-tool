@@ -18,7 +18,7 @@ pytest -q
 - Simple alpha-spending curve generation
 - Interactive α-spending plots in the UI with zoom controls
 - Markdown export utility
-- Notebook and PDF export utilities with a common template
+- Markdown and notebook export utilities with a common template
 - Basic API to run A/B analyses (`analysis_api.py`)
 - Feature flag API with an in-memory store (`flags_api.py`)
 - Bandit helpers: UCB1 and epsilon-greedy

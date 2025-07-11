@@ -3,7 +3,6 @@
 import sys
 import sqlite3
 import csv
-import pandas as pd
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -216,15 +215,20 @@ class ABTestWindow(QMainWindow):
             show_error(self, str(e))
 
     def _export_history_excel(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save History Excel", "", "Excel Files (*.xlsx)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save History Markdown", "", "Markdown Files (*.md)"
+        )
         if not path:
             return
-        df = pd.read_sql_query(
-            "SELECT timestamp AS Timestamp, test AS Test, result AS Result FROM history ORDER BY id",
-            self.conn
-        )
+        c = self.conn.cursor()
+        c.execute("SELECT timestamp, test, result FROM history ORDER BY id")
+        rows = c.fetchall()
         try:
-            df.to_excel(path, index=False)
+            with open(path, "w", encoding="utf-8") as f:
+                f.write("| Timestamp | Test | Result |\n")
+                f.write("|---|---|---|\n")
+                for ts, test, result in rows:
+                    f.write(f"| {ts} | {test} | {result} |\n")
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
