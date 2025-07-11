@@ -997,6 +997,11 @@ class ABTestWindow(QMainWindow):
         p.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
         p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
         self.setPalette(p)
+        if hasattr(self, "results_text"):
+            base_style = "font-size:14pt; font-family:Arial;"
+            self.results_text.setStyleSheet(
+                base_style + " background-color: rgb(53,53,53); color: white;"
+            )
 
     def apply_light_theme(self):
         p = QPalette()
@@ -1009,6 +1014,12 @@ class ABTestWindow(QMainWindow):
         p.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
         self.setPalette(p)
         QApplication.setPalette(p)
+        # Ensure results widget uses light colors
+        if hasattr(self, "results_text"):
+            base_style = "font-size:14pt; font-family:Arial;"
+            self.results_text.setStyleSheet(
+                base_style + " background-color: white; color: black;"
+            )
 
     def update_ui_text(self):
         L = self.i18n[self.lang]
