@@ -230,9 +230,8 @@ def run_obrien_fleming(ua, ca, ub, cb, alpha, looks=5, webhook_url=None):
         cb_i = int(cb * i / looks + 0.5)
         if na == 0 or nb == 0:
             continue
-        res = _evaluate_abn_test(na, ca_i, nb, cb_i, alpha=alpha)
-        # threshold p-value for look i
-        thr = 2 * (1 - norm.cdf(base_z / math.sqrt(i)))
+        thr = 2 * (1 - norm.cdf(base_z / math.sqrt(i / looks)))
+        res = _evaluate_abn_test(na, ca_i, nb, cb_i, alpha=thr)
         res["threshold"] = thr
         steps.append(res)
         if res["p_value_ab"] < thr:
