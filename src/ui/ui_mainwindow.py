@@ -37,6 +37,8 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtCore import Qt, QDateTime
 
+from .widgets import with_help_label
+
 from .login import LoginDialog
 
 try:  # Optional dependency
@@ -536,24 +538,28 @@ class ABTestWindow(QMainWindow):
         self.baseline_slider.setValue(40)
         self.baseline_slider.valueChanged.connect(self.update_ui_text)
         self.baseline_slider.setToolTip("Baseline conversion rate")
+        self.baseline_label = QLabel()
 
         self.uplift_slider = QSlider(Qt.Orientation.Horizontal)
         self.uplift_slider.setRange(0, 1000)
         self.uplift_slider.setValue(100)
         self.uplift_slider.valueChanged.connect(self.update_ui_text)
         self.uplift_slider.setToolTip("Expected uplift of variant")
+        self.uplift_label = QLabel()
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
         self.alpha_slider.setRange(0, 100)
         self.alpha_slider.setValue(5)
         self.alpha_slider.valueChanged.connect(self.update_ui_text)
         self.alpha_slider.setToolTip("Significance level")
+        self.alpha_label = QLabel()
 
         self.power_slider = QSlider(Qt.Orientation.Horizontal)
         self.power_slider.setRange(0, 100)
         self.power_slider.setValue(90)
         self.power_slider.valueChanged.connect(self.update_ui_text)
         self.power_slider.setToolTip("Statistical power")
+        self.power_label = QLabel()
 
         # Кнопка расчёта
         self.calc_button = QPushButton()
@@ -698,20 +704,30 @@ class ABTestWindow(QMainWindow):
         # Левая панель
         left = QVBoxLayout()
         # подписи для слайдеров создаются динамически
-        left.addWidget(QLabel())
+        left.addWidget(with_help_label(self.baseline_label, "Baseline conversion rate"))
         left.addWidget(self.baseline_slider)
-        left.addWidget(QLabel())
+        left.addWidget(with_help_label(self.uplift_label, "Expected uplift of variant"))
         left.addWidget(self.uplift_slider)
-        left.addWidget(QLabel())
+        left.addWidget(with_help_label(self.alpha_label, "Significance level"))
         left.addWidget(self.alpha_slider)
-        left.addWidget(QLabel())
+        left.addWidget(with_help_label(self.power_label, "Statistical power"))
         left.addWidget(self.power_slider)
         left.addWidget(self.calc_button)
 
         for G in ["A", "B", "C"]:
-            left.addWidget(getattr(self, f"users_{G}_label"))
+            left.addWidget(
+                with_help_label(
+                    getattr(self, f"users_{G}_label"),
+                    f"Users in group {G}",
+                )
+            )
             left.addWidget(getattr(self, f"users_{G}_var"))
-            left.addWidget(getattr(self, f"conv_{G}_label"))
+            left.addWidget(
+                with_help_label(
+                    getattr(self, f"conv_{G}_label"),
+                    f"Conversions in group {G}",
+                )
+            )
             left.addWidget(getattr(self, f"conv_{G}_var"))
 
         left.addWidget(self.analyze_button)
@@ -721,17 +737,17 @@ class ABTestWindow(QMainWindow):
         left.addWidget(QLabel("β-prior:"))
         left.addWidget(self.prior_beta_spin)
         left.addWidget(self.bayes_button)
-        left.addWidget(self.bandit_label)
+        left.addWidget(with_help_label(self.bandit_label, "Bandit strategy"))
         left.addWidget(self.bandit_combo)
         left.addWidget(self.aa_button)
         left.addWidget(self.seq_button)
         left.addWidget(self.obf_button)
 
-        left.addWidget(self.revenue_per_user_label)
+        left.addWidget(with_help_label(self.revenue_per_user_label, "Revenue per user"))
         left.addWidget(self.revenue_per_user_var)
-        left.addWidget(self.traffic_cost_label)
+        left.addWidget(with_help_label(self.traffic_cost_label, "Traffic cost per user"))
         left.addWidget(self.traffic_cost_var)
-        left.addWidget(self.budget_label)
+        left.addWidget(with_help_label(self.budget_label, "Available budget"))
         left.addWidget(self.budget_var)
         left.addWidget(self.roi_button)
         left.addStretch()
@@ -791,6 +807,9 @@ class ABTestWindow(QMainWindow):
         quick = QAction("Quick AB Test", self)
         quick.triggered.connect(self._open_quick_ab_test)
         fm.addAction(quick)
+        oneclick = QAction("One-click AB", self)
+        oneclick.triggered.connect(self._run_one_click_ab)
+        fm.addAction(oneclick)
         fm.addSeparator()
         a3 = QAction(L["export_pdf"], self)
         a3.triggered.connect(self.export_pdf)
@@ -845,17 +864,16 @@ class ABTestWindow(QMainWindow):
         self.tab_widget.setTabText(1, L["history"])
 
         # Слайдерные лейблы
-        g = self.baseline_slider.parentWidget().layout()
-        g.itemAt(0).widget().setText(
+        self.baseline_label.setText(
             f"{L['baseline']} {self.baseline_slider.value()/10:.1f}%"
         )
-        g.itemAt(2).widget().setText(
+        self.uplift_label.setText(
             f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%"
         )
-        g.itemAt(4).widget().setText(
+        self.alpha_label.setText(
             f"{L['alpha']} {self.alpha_slider.value()/100:.2f}"
         )
-        g.itemAt(6).widget().setText(
+        self.power_label.setText(
             f"{L['power']} {self.power_slider.value()/100:.2f}"
         )
 
@@ -1187,6 +1205,23 @@ class ABTestWindow(QMainWindow):
             )
             self.results_text.setHtml(f"<pre>{msg}</pre>")
             self._add_history("Quick AB Test", f"<pre>{msg}</pre>")
+
+    def _run_one_click_ab(self):
+        """Run a preconfigured A/B test without user input."""
+        data = {
+            "flag": "demo-flag",
+            "primary_metric": "conversion",
+            "sequential": True,
+            "cuped": False,
+            "srm": True,
+        }
+        msg = (
+            f"Flag: {data['flag']}\n"
+            f"Metric: {data['primary_metric']}\n"
+            f"Sequential={data['sequential']} CUPED={data['cuped']} SRM={data['srm']}"
+        )
+        self.results_text.setHtml(f"<pre>{msg}</pre>")
+        self._add_history("One-click AB", f"<pre>{msg}</pre>")
 
     # ————— Сессионные функции и экспорт результатов —————
 
