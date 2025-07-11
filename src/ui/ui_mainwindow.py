@@ -196,6 +196,7 @@ class AddDataSourceDialog:
                 (),
                 {"addItems": lambda *a, **k: None, "currentText": lambda self: ""},
             )
+
         class _Sig:
             def connect(self, *a, **k):
                 pass
@@ -301,6 +302,7 @@ class AddDataSourceDialog:
         L = i18n.get(lang, i18n.get("EN"))
         try:
             from utils.connectors import BigQueryConnector, RedshiftConnector
+
             if self.type_combo.currentText() == "BigQuery":
                 conn = BigQueryConnector(
                     self.bq_project.text(),
@@ -538,34 +540,34 @@ class ABTestWindow(QMainWindow):
         self.baseline_slider.setRange(0, 1000)
         self.baseline_slider.setValue(40)
         self.baseline_slider.valueChanged.connect(self.update_ui_text)
-        self.baseline_slider.setToolTip("Baseline conversion rate")
+        self.baseline_slider.setToolTip(self.i18n[self.lang]["tooltip.baseline"])
         self.baseline_label = QLabel()
 
         self.uplift_slider = QSlider(Qt.Orientation.Horizontal)
         self.uplift_slider.setRange(0, 1000)
         self.uplift_slider.setValue(100)
         self.uplift_slider.valueChanged.connect(self.update_ui_text)
-        self.uplift_slider.setToolTip("Expected uplift of variant")
+        self.uplift_slider.setToolTip(self.i18n[self.lang]["tooltip.uplift"])
         self.uplift_label = QLabel()
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
         self.alpha_slider.setRange(0, 100)
         self.alpha_slider.setValue(5)
         self.alpha_slider.valueChanged.connect(self.update_ui_text)
-        self.alpha_slider.setToolTip("Significance level")
+        self.alpha_slider.setToolTip(self.i18n[self.lang]["tooltip.alpha"])
         self.alpha_label = QLabel()
 
         self.power_slider = QSlider(Qt.Orientation.Horizontal)
         self.power_slider.setRange(0, 100)
         self.power_slider.setValue(90)
         self.power_slider.valueChanged.connect(self.update_ui_text)
-        self.power_slider.setToolTip("Statistical power")
+        self.power_slider.setToolTip(self.i18n[self.lang]["tooltip.power"])
         self.power_label = QLabel()
 
         # Кнопка расчёта
         self.calc_button = QPushButton()
         self.calc_button.clicked.connect(self.calculate_sample_size)
-        self.calc_button.setToolTip("Calculate sample size")
+        self.calc_button.setToolTip(self.i18n[self.lang]["tooltip.calc"])
 
         # Поля A/B/C
         for G in ["A", "B", "C"]:
@@ -583,22 +585,22 @@ class ABTestWindow(QMainWindow):
         # Кнопки анализа
         self.analyze_button = QPushButton()
         self.analyze_button.clicked.connect(self._on_analyze)
-        self.analyze_button.setToolTip("Run A/B/n test")
+        self.analyze_button.setToolTip(self.i18n[self.lang]["tooltip.analyze"])
         self.conf_button = QPushButton()
         self.conf_button.clicked.connect(self._on_plot_confidence_intervals)
-        self.conf_button.setToolTip("Plot confidence intervals")
+        self.conf_button.setToolTip(self.i18n[self.lang]["tooltip.confidence"])
         self.bayes_button = QPushButton()
         self.bayes_button.clicked.connect(self._on_run_bayesian)
-        self.bayes_button.setToolTip("Run Bayesian analysis")
+        self.bayes_button.setToolTip(self.i18n[self.lang]["tooltip.bayesian"])
         self.aa_button = QPushButton()
         self.aa_button.clicked.connect(self._on_run_aa)
-        self.aa_button.setToolTip("Run A/A simulation")
+        self.aa_button.setToolTip(self.i18n[self.lang]["tooltip.aa"])
         self.seq_button = QPushButton()
         self.seq_button.clicked.connect(self._on_run_sequential)
-        self.seq_button.setToolTip("Run sequential analysis")
+        self.seq_button.setToolTip(self.i18n[self.lang]["tooltip.sequential"])
         self.obf_button = QPushButton()
         self.obf_button.clicked.connect(self._on_run_obrien_fleming)
-        self.obf_button.setToolTip("Run O'Brien-Fleming analysis")
+        self.obf_button.setToolTip(self.i18n[self.lang]["tooltip.obf"])
 
         # Priors для байес
         self.prior_alpha_spin = QDoubleSpinBox()
@@ -618,35 +620,39 @@ class ABTestWindow(QMainWindow):
         self.revenue_per_user_label = QLabel()
         self.revenue_per_user_var = QLineEdit("50")
         self.revenue_per_user_var.setValidator(QDoubleValidator(0, 1e9, 2))
-        self.revenue_per_user_var.setToolTip("Revenue per user")
+        self.revenue_per_user_var.setToolTip(
+            self.i18n[self.lang]["tooltip.revenue_per_user"]
+        )
         self.traffic_cost_label = QLabel()
         self.traffic_cost_var = QLineEdit("10")
         self.traffic_cost_var.setValidator(QDoubleValidator(0, 1e9, 2))
-        self.traffic_cost_var.setToolTip("Traffic cost per user")
+        self.traffic_cost_var.setToolTip(self.i18n[self.lang]["tooltip.traffic_cost"])
         self.budget_label = QLabel()
         self.budget_var = QLineEdit("10000")
         self.budget_var.setValidator(QDoubleValidator(0, 1e12, 2))
-        self.budget_var.setToolTip("Available budget")
+        self.budget_var.setToolTip(self.i18n[self.lang]["tooltip.budget"])
         self.roi_button = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
-        self.roi_button.setToolTip("Calculate ROI")
+        self.roi_button.setToolTip(self.i18n[self.lang]["tooltip.roi"])
 
         # Графики
         self.plot_ci_button = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
-        self.plot_ci_button.setToolTip("Confidence intervals plot")
+        self.plot_ci_button.setToolTip(self.i18n[self.lang]["tooltip.plot_ci"])
         self.plot_power_button = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
-        self.plot_power_button.setToolTip("Required sample size curve")
+        self.plot_power_button.setToolTip(self.i18n[self.lang]["tooltip.plot_power"])
         self.plot_alpha_button = QPushButton()
         self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
-        self.plot_alpha_button.setToolTip("Alpha spending plot")
+        self.plot_alpha_button.setToolTip(self.i18n[self.lang]["tooltip.plot_alpha"])
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
-        self.plot_bootstrap_button.setToolTip("Bootstrap distribution")
+        self.plot_bootstrap_button.setToolTip(
+            self.i18n[self.lang]["tooltip.plot_bootstrap"]
+        )
         self.save_plot_button = QPushButton()
         self.save_plot_button.clicked.connect(self._save_current_plot)
-        self.save_plot_button.setToolTip("Save last plot")
+        self.save_plot_button.setToolTip(self.i18n[self.lang]["tooltip.save_plot"])
 
         # Area to embed Plotly plots if QtWebEngine is available
         self._last_fig = None
@@ -664,12 +670,14 @@ class ABTestWindow(QMainWindow):
         self.load_pre_exp_button.clicked.connect(
             lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented")
         )
-        self.load_pre_exp_button.setToolTip("Load pre-experiment data")
+        self.load_pre_exp_button.setToolTip(
+            self.i18n[self.lang]["tooltip.load_pre_exp"]
+        )
         self.clear_button = QPushButton()
         self.clear_button.clicked.connect(
             lambda: self.results_text.setHtml("<pre></pre>")
         )
-        self.clear_button.setToolTip("Clear results")
+        self.clear_button.setToolTip(self.i18n[self.lang]["tooltip.clear"])
 
         # История
         self.history_table = QTableWidget(0, 5)
@@ -682,10 +690,14 @@ class ABTestWindow(QMainWindow):
         self.history_filter.textChanged.connect(self._filter_history)
         self.del_selected_button = QPushButton()
         self.del_selected_button.clicked.connect(self._delete_selected_history)
-        self.del_selected_button.setToolTip("Delete selected history rows")
+        self.del_selected_button.setToolTip(
+            self.i18n[self.lang]["tooltip.delete_selected"]
+        )
         self.clear_history_button = QPushButton()
         self.clear_history_button.clicked.connect(self._clear_all_history)
-        self.clear_history_button.setToolTip("Clear all history")
+        self.clear_history_button.setToolTip(
+            self.i18n[self.lang]["tooltip.clear_history"]
+        )
 
     # ————— Построение интерфейса —————
 
@@ -746,7 +758,9 @@ class ABTestWindow(QMainWindow):
 
         left.addWidget(with_help_label(self.revenue_per_user_label, "Revenue per user"))
         left.addWidget(self.revenue_per_user_var)
-        left.addWidget(with_help_label(self.traffic_cost_label, "Traffic cost per user"))
+        left.addWidget(
+            with_help_label(self.traffic_cost_label, "Traffic cost per user")
+        )
         left.addWidget(self.traffic_cost_var)
         left.addWidget(with_help_label(self.budget_label, "Available budget"))
         left.addWidget(self.budget_var)
@@ -874,15 +888,9 @@ class ABTestWindow(QMainWindow):
         self.baseline_label.setText(
             f"{L['baseline']} {self.baseline_slider.value()/10:.1f}%"
         )
-        self.uplift_label.setText(
-            f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%"
-        )
-        self.alpha_label.setText(
-            f"{L['alpha']} {self.alpha_slider.value()/100:.2f}"
-        )
-        self.power_label.setText(
-            f"{L['power']} {self.power_slider.value()/100:.2f}"
-        )
+        self.uplift_label.setText(f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%")
+        self.alpha_label.setText(f"{L['alpha']} {self.alpha_slider.value()/100:.2f}")
+        self.power_label.setText(f"{L['power']} {self.power_slider.value()/100:.2f}")
 
         # Кнопки и поля
         self.calc_button.setText(L["calculate_sample_size"])
