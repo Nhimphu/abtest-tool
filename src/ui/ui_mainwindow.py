@@ -629,7 +629,7 @@ class ABTestWindow(QMainWindow):
 
         # Кнопки анализа
         self.analyze_button = QPushButton()
-        self.analyze_button.setIcon(QIcon(":/resources/run.svg"))
+        self.analyze_button.setIcon(QIcon("resources:run.svg"))
         self.analyze_button.clicked.connect(self._on_analyze)
         self.analyze_button.setToolTip(self.i18n[self.lang]["tooltip.analyze"])
         self.analyze_button.setStatusTip(self.i18n[self.lang]["help.analyze"])
@@ -710,7 +710,7 @@ class ABTestWindow(QMainWindow):
             self.i18n[self.lang]["help.plot_bootstrap"]
         )
         self.save_plot_button = QPushButton()
-        self.save_plot_button.setIcon(QIcon(":/resources/export.svg"))
+        self.save_plot_button.setIcon(QIcon("resources:export.svg"))
         self.save_plot_button.clicked.connect(self._save_current_plot)
         self.save_plot_button.setToolTip(self.i18n[self.lang]["tooltip.save_plot"])
         self.save_plot_button.setStatusTip(self.i18n[self.lang]["help.save_plot"])
@@ -738,7 +738,7 @@ class ABTestWindow(QMainWindow):
             self.i18n[self.lang]["help.load_pre_exp"]
         )
         self.clear_button = QPushButton()
-        self.clear_button.setIcon(QIcon(":/resources/undo.svg"))
+        self.clear_button.setIcon(QIcon("resources:undo.svg"))
         self.clear_button.clicked.connect(
             lambda: self.results_text.setHtml("<pre></pre>")
         )
