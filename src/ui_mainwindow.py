@@ -41,7 +41,8 @@ from logic import (
     plot_confidence_intervals,
     plot_power_curve,
     plot_bootstrap_distribution,
-    save_plot
+    save_plot,
+    srm_check,
 )
 from i18n import i18n, detect_language
 import utils
@@ -521,6 +522,13 @@ class ABTestWindow(QMainWindow):
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
             alpha  = self.alpha_slider.value()/100
+            flag, p = srm_check(ua, ub, alpha=alpha)
+            if flag:
+                QMessageBox.warning(
+                    self,
+                    "SRM detected",
+                    f"SRM check failed (p={p:.3f}). Results may be biased.",
+                )
             res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
             html   = (f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
                       f"B {res['cr_b']:.2%} ({cb}/{ub})\n"

@@ -12,11 +12,11 @@ python src/main.py
 pytest -q
 ```
 
-## Additional Features
+-## Additional Features
 
-- CUPED adjustment and SRM check helpers
+- CUPED adjustment and SRM check helpers (SRM warnings shown before analysis)
 - Simple alpha-spending curve generation
-- Interactive α-spending plots in the UI
+- Interactive α-spending plots in the UI with zoom controls
 - Markdown export utility
 - Notebook export utility
 - Basic API to run A/B analyses (`analysis_api.py`)
