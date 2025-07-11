@@ -91,6 +91,7 @@ from stats.ab_test import (
     srm_check,
     cuped_adjustment,
 )
+import plugin_loader
 from plots import (
     plot_bayesian_posterior,
     plot_confidence_intervals,
@@ -648,7 +649,7 @@ class ABTestWindow(QMainWindow):
         self.conf_button.setToolTip(self.i18n[self.lang]["tooltip.confidence"])
         self.conf_button.setStatusTip(self.i18n[self.lang]["help.confidence"])
         self.bayes_button = QPushButton()
-        self.bayes_button.clicked.connect(self._on_run_bayesian)
+        self.bayes_button.clicked.connect(self._on_run_bayes)
         self.bayes_button.setToolTip(self.i18n[self.lang]["tooltip.bayesian"])
         self.bayes_button.setStatusTip(self.i18n[self.lang]["help.bayesian"])
         self.aa_button = QPushButton()
@@ -1261,13 +1262,16 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
-    def _on_run_bayesian(self):
+    def _on_run_bayes(self):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             a0 = self.prior_alpha_spin.value()
             b0 = self.prior_beta_spin.value()
-            prob, x, pa, pb = bayesian_analysis(a0, b0, ua, ca, ub, cb)
+            plug = plugin_loader.get_plugin("bayesian")
+            if not plug or not hasattr(plug, "bayesian_analysis"):
+                raise ImportError("Bayesian analysis plugin not available")
+            prob, x, pa, pb = plug.bayesian_analysis(a0, b0, ua, ca, ub, cb)
             html = f"<pre>P(B>A) = {prob:.2%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("Bayesian Analysis", html)
