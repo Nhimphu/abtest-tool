@@ -2,6 +2,8 @@ import math
 import types
 from typing import List, Optional
 
+from metrics import track_time
+
 try:
     import numpy as np
 except Exception:
@@ -28,6 +30,7 @@ except Exception:
 from webhooks import send_webhook
 
 
+@track_time
 def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> int:
     """Размер выборки на группу (двусторонний тест разности пропорций)."""
     if p1 == p2 or p1 <= 0 or p2 <= 0:
@@ -41,6 +44,7 @@ def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> in
     return max(1, math.ceil(n))
 
 
+@track_time
 def calculate_mde(sample_size: int, alpha: float, power: float, p1: float) -> float:
     """Минимальная обнаруживаемая разница при данных sample_size."""
     if sample_size <= 0 or p1 <= 0:
@@ -136,6 +140,7 @@ def _evaluate_abn_test(
     }
 
 
+@track_time
 def bayesian_analysis(alpha_prior: float, beta_prior: float, users_a: int, conv_a: int, users_b: int, conv_b: int):
     """Bayesian A/B analysis for Bernoulli outcomes."""
     a1 = alpha_prior + conv_a
@@ -150,6 +155,7 @@ def bayesian_analysis(alpha_prior: float, beta_prior: float, users_a: int, conv_
     return prob, x, pdf_a, pdf_b
 
 
+@track_time
 def run_aa_simulation(baseline: float, total_users: int, alpha: float, num_sim: int = 1000) -> float:
     """A/A симуляция, возвращает фактический FPR."""
     ua = total_users // 2
@@ -167,6 +173,7 @@ def run_aa_simulation(baseline: float, total_users: int, alpha: float, num_sim: 
     return float(np.mean(p_vals < alpha))
 
 
+@track_time
 def evaluate_abn_test(
     users_a: int,
     conv_a: int,
@@ -187,6 +194,7 @@ def evaluate_abn_test(
     return res
 
 
+@track_time
 def run_sequential_analysis(ua: int, ca: int, ub: int, cb: int, alpha: float, looks: int = 5, webhook_url: Optional[str] = None):
     """Sequential Pocock method."""
     if looks <= 0:
@@ -212,6 +220,7 @@ def run_sequential_analysis(ua: int, ca: int, ub: int, cb: int, alpha: float, lo
     return steps, pocock_alpha
 
 
+@track_time
 def run_obrien_fleming(ua: int, ca: int, ub: int, cb: int, alpha: float, looks: int = 5, webhook_url: Optional[str] = None):
     """Sequential O'Brien-Fleming method."""
     if looks <= 0:

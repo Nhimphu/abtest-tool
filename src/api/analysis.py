@@ -9,6 +9,7 @@ from flask_jwt_extended import (
 )
 from flask_swagger_ui import get_swaggerui_blueprint
 from stats.ab_test import evaluate_abn_test
+from metrics import REQUEST_COUNTER, generate_latest, CONTENT_TYPE_LATEST
 
 
 def create_app() -> Flask:
@@ -20,6 +21,15 @@ def create_app() -> Flask:
         "/docs", "/spec", config={"app_name": "Analysis API"}
     )
     app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
+
+    @app.after_request
+    def record_metrics(response):
+        REQUEST_COUNTER.labels(request.path, request.method, response.status_code).inc()
+        return response
+
+    @app.route("/metrics")
+    def metrics():
+        return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     @app.post("/login")
     def login():
