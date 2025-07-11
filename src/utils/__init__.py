@@ -2,44 +2,21 @@ import json
 import csv
 from typing import Any, Dict, Iterable, List
 
-import pandas as pd
-from reportlab.lib.pagesizes import letter
-from reportlab.pdfgen import canvas as pdfcanvas
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.ttfonts import TTFont
-
-# Try to register font for PDF export
-try:
-    pdfmetrics.registerFont(TTFont('Arial', 'arial.ttf'))
-    PDF_FONT = 'Arial'
-except Exception:  # pragma: no cover - optional
-    PDF_FONT = 'Helvetica'
+"""Utility helpers for exporting results and simple data processing."""
 
 
 def export_pdf(sections: Dict[str, Iterable[str]], filepath: str) -> None:
-    """Export results following the notebook template into a PDF."""
-    order = ["Описание", "Результаты", "Визуализации", "Интерпретация"]
-    c = pdfcanvas.Canvas(filepath, pagesize=letter)
-    c.setFont(PDF_FONT, 10)
-    _, height = letter
-    y = height - 40
-    for name in order:
-        lines = sections.get(name, [])
-        c.drawString(40, y, name)
-        y -= 14
-        for line in lines:
-            c.drawString(60, y, str(line))
-            y -= 12
-        y -= 10
-    c.save()
+    """Export results to a notebook file instead of a PDF."""
+    if filepath.lower().endswith(".pdf"):
+        filepath = filepath[:-4] + ".ipynb"
+    export_notebook(sections, filepath)
 
 
 def export_excel(sections: Dict[str, Iterable[str]], filepath: str) -> None:
-    with pd.ExcelWriter(filepath) as writer:
-        for name, lines in sections.items():
-            rows = [line.strip().split(":") for line in lines if ":" in line]
-            df = pd.DataFrame(rows, columns=["Metric", "Value"])
-            df.to_excel(writer, sheet_name=name[:31], index=False)
+    """Export results to a Markdown file instead of Excel."""
+    if filepath.lower().endswith(('.xls', '.xlsx')):
+        filepath = filepath.rsplit('.', 1)[0] + '.md'
+    export_markdown(sections, filepath)
 
 
 def export_csv(sections: Dict[str, Iterable[str]], filepath: str) -> None:
