@@ -1,5 +1,6 @@
 import json
 import urllib.request
+import logging
 
 
 def send_webhook(url: str, message: str) -> None:
@@ -8,5 +9,5 @@ def send_webhook(url: str, message: str) -> None:
     req = urllib.request.Request(url, data=data, headers={"Content-Type": "application/json"})
     try:
         urllib.request.urlopen(req, timeout=5)
-    except Exception:
-        pass
+    except Exception as e:
+        logging.error("Webhook call failed: %s", e)

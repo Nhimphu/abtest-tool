@@ -83,13 +83,54 @@ def create_app() -> Flask:
             "openapi": "3.0.0",
             "info": {"title": "Analysis API", "version": "1.0"},
             "servers": [{"url": "/"}],
+            "components": {
+                "schemas": {
+                    "Login": {
+                        "type": "object",
+                        "properties": {
+                            "username": {"type": "string"},
+                            "password": {"type": "string"},
+                        },
+                        "required": ["username", "password"],
+                    },
+                    "Token": {
+                        "type": "object",
+                        "properties": {
+                            "access_token": {"type": "string"},
+                            "refresh_token": {"type": "string"},
+                        },
+                    },
+                    "AbTestRequest": {
+                        "type": "object",
+                        "properties": {
+                            "users_a": {"type": "integer"},
+                            "conv_a": {"type": "integer"},
+                            "users_b": {"type": "integer"},
+                            "conv_b": {"type": "integer"},
+                            "metrics": {"type": "integer"},
+                            "alpha": {"type": "number"},
+                        },
+                        "required": ["users_a", "conv_a", "users_b", "conv_b"],
+                    },
+                }
+            },
             "paths": {
-                "/login": {"post": {"responses": {"200": {"description": "Login"}}}},
+                "/login": {
+                    "post": {
+                        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Login"}}}},
+                        "responses": {"200": {"description": "Login", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Token"}}}}},
+                    }
+                },
                 "/refresh": {
-                    "post": {"responses": {"200": {"description": "Refresh"}}}
+                    "post": {
+                        "responses": {"200": {"description": "Refresh", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Token"}}}}}
+                    }
                 },
                 "/abtest": {
-                    "post": {"responses": {"200": {"description": "AB test result"}}}
+                    "post": {
+                        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/AbTestRequest"}}}},
+                        "responses": {"200": {"description": "AB test result"}},
+                    }
                 },
                 "/metrics": {"get": {"responses": {"200": {"description": "Metrics"}}}},
             },

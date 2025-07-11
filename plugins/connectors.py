@@ -22,6 +22,10 @@ class BigQueryConnector:
         result = self._client.query(sql).result()
         return [dict(row.items()) for row in result]
 
+    def close(self) -> None:
+        """BigQuery client does not require explicit close but provided for API consistency."""
+        pass
+
 
 class RedshiftConnector:
     """Redshift connector using the official ``redshift-connector`` package."""
@@ -45,6 +49,9 @@ class RedshiftConnector:
             cols = [desc[0] for desc in cur.description]
             rows = cur.fetchall()
         return [dict(zip(cols, row)) for row in rows]
+
+    def close(self) -> None:
+        self._conn.close()
 
 
 __all__ = ["BigQueryConnector", "RedshiftConnector"]
