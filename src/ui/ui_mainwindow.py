@@ -725,7 +725,6 @@ class ABTestWindow(QMainWindow):
             left.addWidget(getattr(self, f"conv_{G}_var"))
 
         left.addWidget(self.analyze_button)
-        left.addWidget(self.conf_button)
         left.addWidget(QLabel("α-prior:"))
         left.addWidget(self.prior_alpha_spin)
         left.addWidget(QLabel("β-prior:"))
