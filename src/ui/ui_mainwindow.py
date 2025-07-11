@@ -369,7 +369,7 @@ class ABTestWindow(QMainWindow):
         self.update_ui_text()
         self.sources = []
         self.token = None
-        self._setup_auth()
+        self.refresh_token = None
 
     # ————— История (SQLite) —————
 
@@ -890,7 +890,7 @@ class ABTestWindow(QMainWindow):
         self.clear_history_button.setText(L["clear_history"])
 
     # ----- auth -----
-    def _setup_auth(self):
+    def authenticate(self):
         self._auth_buttons = [
             self.calc_button,
             self.analyze_button,
@@ -910,9 +910,10 @@ class ABTestWindow(QMainWindow):
 
         dlg = LoginDialog(self)
         if dlg.exec():
-            token = self._request_token(*dlg.credentials())
+            token, refresh = self._request_token(*dlg.credentials())
             if token:
                 self.token = token
+                self.refresh_token = refresh
                 for b in self._auth_buttons:
                     b.setEnabled(True)
 
@@ -925,9 +926,10 @@ class ABTestWindow(QMainWindow):
         )
         try:
             with urllib.request.urlopen(req, timeout=5) as resp:
-                return json.loads(resp.read().decode()).get("access_token")
+                js = json.loads(resp.read().decode())
+                return js.get("access_token"), js.get("refresh_token")
         except Exception:
-            return None
+            return None, None
 
     # ————— Обработчики —————
 
