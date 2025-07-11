@@ -32,7 +32,7 @@ def validate_numeric(widget, min_val, max_val, percent=False):
 def export_pdf(html, filepath):
     c = pdfcanvas.Canvas(filepath, pagesize=letter)
     c.setFont(PDF_FONT, 10)
-    width, height = letter
+    _, height = letter
     text = c.beginText(40, height - 40)
     text.setLeading(12)
     for line in html.strip().split('\n'):

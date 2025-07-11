@@ -191,7 +191,9 @@ def run_sequential_analysis(ua, ca, ub, cb, alpha, looks=5, webhook_url=None):
     When ``webhook_url`` is provided, a POST notification is sent if the
     test stops early.
     """
-    pocock_alpha = alpha * (1 - (1 - 0.5**(1/looks)) / (1 - 0.5))
+    if looks <= 0:
+        raise ValueError("looks must be positive")
+    pocock_alpha = alpha / looks
     steps = []
     for i in range(1, looks+1):
         na = int(ua * i/looks)

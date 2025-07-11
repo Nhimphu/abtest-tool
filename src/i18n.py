@@ -100,5 +100,6 @@ def detect_language() -> str:
     """Return 'RU' if OS locale starts with ru, else 'EN'."""
     import locale
 
-    loc = locale.getdefaultlocale()[0] or ''
-    return 'RU' if loc.lower().startswith('ru') else 'EN'
+    loc, _ = locale.getlocale()
+    loc = loc or ''
+    return 'RU' if str(loc).lower().startswith('ru') else 'EN'
