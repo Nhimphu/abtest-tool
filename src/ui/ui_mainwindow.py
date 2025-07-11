@@ -483,14 +483,22 @@ class ABTestWindow(QMainWindow):
         pb = self._build_inline_chart(content)
         self.history_table.setCellWidget(r, 4, pb)
 
-    def _delete_selected_history(self):
-        for r in reversed(range(self.history_table.rowCount())):
-            item = self.history_table.item(r, 0)
-            if item.checkState() == Qt.CheckState.Checked:
+    def _on_delete_selected(self):
+        """Delete currently selected rows from history."""
+        model = self.history_table.selectionModel()
+        if not model or not model.selectedRows():
+            QMessageBox.warning(self, "Warning", "Nothing selected")
+            return
+        rows = sorted((idx.row() for idx in model.selectedRows()), reverse=True)
+        for row in rows:
+            item = self.history_table.item(row, 0)
+            if item is not None:
                 rec_id = item.data(Qt.ItemDataRole.UserRole)
                 self.conn.cursor().execute("DELETE FROM history WHERE id=?", (rec_id,))
-                self.conn.commit()
-                self.history_table.removeRow(r)
+        self.conn.commit()
+        for row in rows:
+            self.history_table.removeRow(row)
+        self._load_history()
 
     def _clear_all_history(self):
         self.conn.cursor().execute("DELETE FROM history")
@@ -755,12 +763,12 @@ class ABTestWindow(QMainWindow):
         self.history_filter = QLineEdit()
         self.history_filter.setPlaceholderText("Filter history")
         self.history_filter.textChanged.connect(self._filter_history)
-        self.del_selected_button = QPushButton()
-        self.del_selected_button.clicked.connect(self._delete_selected_history)
-        self.del_selected_button.setToolTip(
+        self.delete_button = QPushButton()
+        self.delete_button.clicked.connect(self._on_delete_selected)
+        self.delete_button.setToolTip(
             self.i18n[self.lang]["tooltip.delete_selected"]
         )
-        self.del_selected_button.setStatusTip(
+        self.delete_button.setStatusTip(
             self.i18n[self.lang]["help.delete_selected"]
         )
         self.clear_history_button = QPushButton()
@@ -903,7 +911,7 @@ class ABTestWindow(QMainWindow):
         vh.addWidget(self.history_filter)
         vh.addWidget(self.history_table)
         hh = QHBoxLayout()
-        hh.addWidget(self.del_selected_button)
+        hh.addWidget(self.delete_button)
         hh.addWidget(self.clear_history_button)
         vh.addLayout(hh)
 
@@ -931,7 +939,7 @@ class ABTestWindow(QMainWindow):
             self.save_plot_button,
             self.load_pre_exp_button,
             self.clear_button,
-            self.del_selected_button,
+            self.delete_button,
             self.clear_history_button,
         ]
         for w in widgets:
@@ -1082,7 +1090,7 @@ class ABTestWindow(QMainWindow):
         self.plot_alpha_button.setText("α-spending")
         self.plot_bootstrap_button.setText(L["bootstrap"])
         self.save_plot_button.setText(L["save_plot"])
-        self.del_selected_button.setText(L["delete_selected"])
+        self.delete_button.setText(L["delete_selected"])
         self.clear_history_button.setText(L["clear_history"])
 
     # ----- auth -----
