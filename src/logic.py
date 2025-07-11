@@ -422,10 +422,53 @@ def segment_data(records, **filters):
 
 
 def compute_custom_metric(records, expression):
-    """Evaluate expression like 'sum(conv)/sum(users)' on record list."""
-    env = {
-        'sum': lambda field: sum(float(r.get(field, 0)) for r in records),
-        'len': lambda _: len(records)
-    }
-    return eval(expression, {}, env)
+    """Safely evaluate simple metric expressions on ``records``.
+
+    Only ``sum(<field>)`` and ``len(<any>)`` calls combined with basic
+    arithmetic are allowed. Any other syntax raises ``ValueError``.
+    """
+    import ast
+
+    def _eval(node):
+        if isinstance(node, ast.BinOp):
+            left = _eval(node.left)
+            right = _eval(node.right)
+            if isinstance(node.op, ast.Add):
+                return left + right
+            if isinstance(node.op, ast.Sub):
+                return left - right
+            if isinstance(node.op, ast.Mult):
+                return left * right
+            if isinstance(node.op, ast.Div):
+                return left / right
+            raise ValueError("Unsupported operator")
+        if isinstance(node, ast.UnaryOp):
+            if isinstance(node.op, ast.USub):
+                return -_eval(node.operand)
+            if isinstance(node.op, ast.UAdd):
+                return +_eval(node.operand)
+            raise ValueError("Unsupported unary operator")
+        if isinstance(node, ast.Call):
+            if not isinstance(node.func, ast.Name):
+                raise ValueError("Invalid function call")
+            name = node.func.id
+            if name not in {"sum", "len"} or len(node.args) != 1:
+                raise ValueError("Invalid function")
+            arg = node.args[0]
+            if not isinstance(arg, ast.Constant) or not isinstance(arg.value, str):
+                raise ValueError("Invalid argument")
+            field = arg.value
+            if name == "sum":
+                return sum(float(r.get(field, 0)) for r in records)
+            else:
+                # ``len()`` ignores the field name, kept for API consistency
+                return len(records)
+        if isinstance(node, ast.Constant):
+            if isinstance(node.value, (int, float)):
+                return node.value
+            raise ValueError("Invalid constant")
+        raise ValueError("Unsupported expression")
+
+    tree = ast.parse(expression, mode="eval")
+    return _eval(tree.body)
 
