@@ -24,7 +24,7 @@ jobs:
         if: github.event_name == 'schedule'
         run: pytest tests/test_logic.py tests/test_flags.py
       - name: Publish coverage badge
-        if: github.event_name != 'pull_request'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           coverage xml
           coverage-badge -o coverage.svg -f
