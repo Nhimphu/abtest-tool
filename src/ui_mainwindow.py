@@ -4,6 +4,7 @@ import sys
 import sqlite3
 import csv
 import pandas as pd
+import numpy as np
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -45,7 +46,9 @@ from logic import (
     plot_bootstrap_distribution,
     save_plot,
     cuped_adjustment,
-    srm_check
+    srm_check,
+    ucb1,
+    epsilon_greedy
 )
 from i18n import i18n, detect_language
 from flags import FeatureFlagStore
@@ -651,14 +654,15 @@ class ABTestWindow(QMainWindow):
             res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
             srm_flag, p_srm = srm_check(ua, ub)
             metric_val = locals().get('metric', None)
+            rec_arm = self._recommend_bandit(ca, ua, cb, ub)
             html   = (f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
                       f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
                       f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
                       f"P(A vs B)={res['p_value_ab']:.4f}\n"
                       f"Winner: {res['winner']}\n"
                       f"SRM p={p_srm:.3f}{' ⚠' if srm_flag else ''}\n"
-                      f"Metric={metric_val:.4f}" if metric_val is not None else "" 
-                      + "</pre>")
+                      f"Metric={metric_val:.4f}" if metric_val is not None else ""
+                      f"\nNext arm: {rec_arm}</pre>")
             self.results_text.setHtml(html)
             self._add_history("A/B/n Test", html)
         except Exception as e:
@@ -848,6 +852,20 @@ class ABTestWindow(QMainWindow):
     def redo(self):
         # simple placeholder, real stack not implemented
         pass
+
+    def _recommend_bandit(self, conv_a, users_a, conv_b, users_b):
+        alg = self.bandit_combo.currentText()
+        values = [conv_a, conv_b]
+        counts = [users_a, users_b]
+        if alg == "UCB1":
+            idx = ucb1(values, counts)
+        elif alg == "ε-greedy":
+            idx = epsilon_greedy(values, counts, epsilon=0.1)
+        else:  # Thompson sampling
+            a1, b1 = conv_a + 1, users_a - conv_a + 1
+            a2, b2 = conv_b + 1, users_b - conv_b + 1
+            idx = 0 if np.random.beta(a1, b1) > np.random.beta(a2, b2) else 1
+        return "A" if idx == 0 else "B"
 
     def share_session(self):
         txt = self.results_text.toPlainText()
