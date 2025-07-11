@@ -12,25 +12,50 @@ try:
         QCheckBox,
     )
 except Exception:  # pragma: no cover - allow tests without PyQt installed
-    QWizard = type("QWizard", (), {"__init__": lambda self, *a, **k: None,
-                                   "setWindowTitle": lambda *a, **k: None,
-                                   "addPage": lambda *a, **k: None,
-                                   "setButtonText": lambda *a, **k: None})
+    class _Widget:
+        def __init__(self, *a, **k):
+            self._text = ""
+            self._checked = False
+
+        def addItems(self, *a, **k):
+            pass
+
+        def setPlaceholderText(self, *a, **k):
+            pass
+
+        def setText(self, text=""):
+            self._text = text
+
+        def text(self):
+            return self._text
+
+        def currentText(self):
+            return self._text
+
+        def setChecked(self, val):
+            self._checked = bool(val)
+
+        def isChecked(self):
+            return self._checked
+
+    QWizard = type(
+        "QWizard",
+        (),
+        {
+            "__init__": lambda self, *a, **k: None,
+            "setWindowTitle": lambda *a, **k: None,
+            "addPage": lambda *a, **k: None,
+            "setButtonText": lambda *a, **k: None,
+            "exec": lambda *a, **k: 1,
+        },
+    )
     QWizardPage = type("QWizardPage", (), {"setTitle": lambda *a, **k: None})
     QVBoxLayout = QHBoxLayout = type(
         "Layout",
         (),
         {"addWidget": lambda *a, **k: None, "setContentsMargins": lambda *a, **k: None},
     )
-    QLabel = QComboBox = QLineEdit = QCheckBox = type(
-        "Widget",
-        (),
-        {
-            "addItems": lambda *a, **k: None,
-            "setPlaceholderText": lambda *a, **k: None,
-            "setText": lambda *a, **k: None,
-        },
-    )
+    QLabel = QComboBox = QLineEdit = QCheckBox = _Widget
 
 
 class QuickABTestWizard(QWizard):
@@ -53,6 +78,22 @@ class QuickABTestWizard(QWizard):
             self.setButtonText(finish_const, "Start")
         except Exception:
             pass
+
+    def data(self) -> dict:
+        """Return user selected options."""
+        flags_page = self.page(0)
+        metrics_page = self.page(1)
+        options_page = self.page(2)
+
+        return {
+            "flag": getattr(getattr(flags_page, "flag_combo", None), "currentText", lambda: "")(),
+            "rollout": getattr(getattr(flags_page, "rollout_edit", None), "text", lambda: "")(),
+            "primary_metric": getattr(getattr(metrics_page, "primary_edit", None), "text", lambda: "")(),
+            "custom_metrics": getattr(getattr(metrics_page, "custom_edit", None), "text", lambda: "")(),
+            "sequential": getattr(getattr(options_page, "seq_check", None), "isChecked", lambda: False)(),
+            "cuped": getattr(getattr(options_page, "cuped_check", None), "isChecked", lambda: False)(),
+            "srm": getattr(getattr(options_page, "srm_check", None), "isChecked", lambda: False)(),
+        }
 
     def _build_flags_page(self) -> QWizardPage:
         page = QWizardPage()

@@ -705,6 +705,9 @@ class ABTestWindow(QMainWindow):
         add_ds = QAction(L.get("add_data_source", "Add Data Source"), self)
         add_ds.triggered.connect(self._on_add_data_source)
         fm.addAction(add_ds)
+        quick = QAction("Quick AB Test", self)
+        quick.triggered.connect(self._open_quick_ab_test)
+        fm.addAction(quick)
         fm.addSeparator()
         a3 = QAction(L["export_pdf"], self)
         a3.triggered.connect(self.export_pdf)
@@ -1081,6 +1084,24 @@ class ABTestWindow(QMainWindow):
         if dlg.exec():
             self.sources.append(dlg.data())
             QMessageBox.information(self, "Info", "Data source added")
+
+    def _open_quick_ab_test(self):
+        """Launch the quick A/B test wizard."""
+        try:
+            from .wizard import QuickABTestWizard
+        except Exception:
+            return
+        wiz = QuickABTestWizard(self)
+        res = getattr(wiz, "exec", lambda: 0)()
+        if res:
+            data = wiz.data()
+            msg = (
+                f"Flag: {data['flag']}\n"
+                f"Metric: {data['primary_metric']}\n"
+                f"Sequential={data['sequential']} CUPED={data['cuped']} SRM={data['srm']}"
+            )
+            self.results_text.setHtml(f"<pre>{msg}</pre>")
+            self._add_history("Quick AB Test", f"<pre>{msg}</pre>")
 
     # ————— Сессионные функции и экспорт результатов —————
 
