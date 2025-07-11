@@ -3,6 +3,7 @@
 import sys
 import sqlite3
 import csv
+from typing import Dict
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -91,6 +92,102 @@ class PlotWindow:
             webbrowser.open(f"file://{path}")
 
 
+class AddDataSourceDialog:
+    """Dialog to collect connection information for a new data source."""
+
+    def __init__(self, parent=None):
+        from PyQt6 import QtWidgets
+        QDialog = getattr(QtWidgets, "QDialog", type("QDialog", (), {"exec": lambda self: 0, "accept": lambda self: None, "reject": lambda self: None}))
+        if hasattr(QtWidgets, "QDialogButtonBox"):
+            QDialogButtonBox = QtWidgets.QDialogButtonBox
+        else:  # pragma: no cover - used in tests without PyQt installed
+            class DummySig:
+                def connect(self, *a, **k):
+                    pass
+
+            class QDialogButtonBox:
+                class StandardButton:
+                    Ok = 1
+                    Cancel = 2
+
+                def __init__(self, *a, **k):
+                    self.accepted = DummySig()
+                    self.rejected = DummySig()
+        
+        def _layout_stub():
+            return type("Layout", (), {"setContentsMargins": lambda *a, **k: None, "addWidget": lambda *a, **k: None})()
+
+        QVBoxLayout = getattr(QtWidgets, "QVBoxLayout", _layout_stub)
+        QHBoxLayout = getattr(QtWidgets, "QHBoxLayout", _layout_stub)
+        QLabel = getattr(QtWidgets, "QLabel", lambda *a, **k: type("QLabel", (), {"setText": lambda *a, **k: None})())
+        QLineEdit = getattr(QtWidgets, "QLineEdit", lambda *a, **k: type("QLineEdit", (), {"text": lambda self: "", "setText": lambda *a, **k: None})())
+        QComboBox = getattr(QtWidgets, "QComboBox", lambda *a, **k: type("QComboBox", (), {"addItems": lambda *a, **k: None, "currentText": lambda self: ""})())
+        QWidget = getattr(QtWidgets, "QWidget", lambda *a, **k: type("QWidget", (), {"setLayout": lambda *a, **k: None, "setVisible": lambda *a, **k: None})())
+
+        self._dialog = QDialog(parent)
+        layout = QVBoxLayout(self._dialog)
+        self._dialog.setWindowTitle("Add Data Source")
+        self.type_combo = QComboBox()
+        self.type_combo.addItems(["BigQuery", "Redshift"])
+        layout.addWidget(QLabel("Type"))
+        layout.addWidget(self.type_combo)
+
+        self.rows = {}
+        for name in ["Project", "Credentials", "Host", "Port", "Database", "User", "Password"]:
+            row = QWidget()
+            hl = QHBoxLayout(row)
+            hl.setContentsMargins(0, 0, 0, 0)
+            lbl = QLabel(name)
+            fld = QLineEdit("5439" if name == "Port" else "")
+            if name == "Password" and hasattr(QLineEdit, "EchoMode"):
+                fld.setEchoMode(QLineEdit.EchoMode.Password)
+            hl.addWidget(lbl)
+            hl.addWidget(fld)
+            layout.addWidget(row)
+            self.rows[name.lower()] = (row, fld)
+        self.rs_host = self.rows["host"][1]
+        self.rs_port = self.rows["port"][1]
+        self.rs_db = self.rows["database"][1]
+        self.rs_user = self.rows["user"][1]
+        self.rs_pass = self.rows["password"][1]
+        self.bq_project = self.rows["project"][1]
+        self.bq_creds = self.rows["credentials"][1]
+
+        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        layout.addWidget(self.buttons)
+        self.buttons.accepted.connect(self._dialog.accept)
+        self.buttons.rejected.connect(self._dialog.reject)
+
+        self.type_combo.currentTextChanged.connect(self._update_fields)
+        self._update_fields(self.type_combo.currentText())
+
+    def _update_fields(self, text: str) -> None:
+        is_bq = text == "BigQuery"
+        for key in ["project", "credentials"]:
+            self.rows[key][0].setVisible(is_bq)
+        for key in ["host", "port", "database", "user", "password"]:
+            self.rows[key][0].setVisible(not is_bq)
+
+    def data(self) -> Dict[str, str]:
+        if self.type_combo.currentText() == "BigQuery":
+            return {
+                "type": "bigquery",
+                "project": self.bq_project.text(),
+                "credentials": self.bq_creds.text(),
+            }
+        return {
+            "type": "redshift",
+            "host": self.rs_host.text(),
+            "port": self.rs_port.text(),
+            "database": self.rs_db.text(),
+            "user": self.rs_user.text(),
+            "password": self.rs_pass.text(),
+        }
+
+    def exec(self) -> int:
+        return self._dialog.exec()
+
+
 class ABTestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -112,6 +209,7 @@ class ABTestWindow(QMainWindow):
         self._load_history()
         # Обновляем тексты
         self.update_ui_text()
+        self.sources = []
 
     # ————— История (SQLite) —————
 
@@ -479,6 +577,9 @@ class ABTestWindow(QMainWindow):
         mb = self.menuBar()
         # File / Файл
         fm = mb.addMenu(L['file'])
+        add_ds = QAction(L.get('add_data_source', 'Add Data Source'), self)
+        add_ds.triggered.connect(self._on_add_data_source)
+        fm.addAction(add_ds)
         fm.addSeparator()
         a3 = QAction(L['export_pdf'], self)
         a3.triggered.connect(self.export_pdf)
@@ -759,6 +860,12 @@ class ABTestWindow(QMainWindow):
         else:
             self.apply_dark_theme()
             self.theme_button.setText("☀")
+
+    def _on_add_data_source(self):
+        dlg = AddDataSourceDialog(self)
+        if dlg.exec():
+            self.sources.append(dlg.data())
+            QMessageBox.information(self, "Info", "Data source added")
 
     # ————— Сессионные функции и экспорт результатов —————
 
