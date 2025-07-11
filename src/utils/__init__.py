@@ -1,6 +1,9 @@
 import json
 import csv
+import copy
 from typing import Any, Dict, Iterable, List
+
+from .template import NB_TEMPLATE
 
 from .safe_eval import safe_eval
 
@@ -8,7 +11,11 @@ from .safe_eval import safe_eval
 
 
 def export_pdf(sections: Dict[str, Iterable[str]], filepath: str) -> None:
-    """Export results to a notebook file instead of a PDF."""
+    """Render ``sections`` using the notebook template and save as ``.ipynb``.
+
+    ``export_pdf`` is kept as a thin wrapper for backwards compatibility. It
+    simply redirects to :func:`export_notebook` while adjusting the extension.
+    """
     if filepath.lower().endswith(".pdf"):
         filepath = filepath[:-4] + ".ipynb"
     export_notebook(sections, filepath)
@@ -43,18 +50,25 @@ def export_markdown(sections: Dict[str, Iterable[str]], filepath: str) -> None:
 
 
 def export_notebook(sections: Dict[str, Iterable[str]], filepath: str) -> None:
-    """Export results following the notebook template."""
-    order = ["Описание", "Результаты", "Визуализации", "Интерпретация"]
-    cells = []
-    for name in order:
-        lines = sections.get(name, [])
-        cell = {
-            "cell_type": "markdown",
-            "metadata": {},
-            "source": [f"## {name}\n"] + [str(line) + "\n" for line in lines],
-        }
-        cells.append(cell)
-    nb = {"cells": cells, "metadata": {}, "nbformat": 4, "nbformat_minor": 2}
+    """Render ``sections`` according to :data:`NB_TEMPLATE`."""
+
+    order = ["Description", "Results", "Visualizations", "Interpretation"]
+    aliases = {
+        "Описание": "Description",
+        "Результаты": "Results",
+        "Визуализации": "Visualizations",
+        "Интерпретация": "Interpretation",
+    }
+
+    nb = copy.deepcopy(NB_TEMPLATE)
+    for cell, key in zip(nb["cells"], order):
+        lines = sections.get(key)
+        if lines is None:
+            # try Russian alias
+            rus = next((r for r, e in aliases.items() if e == key), None)
+            lines = sections.get(rus, []) if rus else []
+        cell["source"] = [f"## {key}\n"] + [str(line) + "\n" for line in lines]
+
     with open(filepath, "w", encoding="utf-8") as f:
         json.dump(nb, f, ensure_ascii=False, indent=2)
 
