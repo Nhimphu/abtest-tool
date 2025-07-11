@@ -229,6 +229,12 @@ class ABTestWindow(QMainWindow):
                 test TEXT,
                 result TEXT
             )''')
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS session_states (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                payload TEXT,
+                timestamp TEXT
+            )''')
         self.conn.commit()
 
     def _load_history(self):
