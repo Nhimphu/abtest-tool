@@ -142,12 +142,17 @@ from ui_mainwindow import ABTestWindow, QFileDialog, utils
 def test_export_pdf_invokes_util(monkeypatch):
     recorded = {}
     monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *a, **k: ('out.pdf', ''))
-    monkeypatch.setattr(utils, 'export_pdf', lambda html, path: recorded.setdefault('args', (html, path)))
+    monkeypatch.setattr(utils, 'export_pdf', lambda sec, path: recorded.setdefault('args', (sec, path)))
 
     dummy = types.SimpleNamespace(results_text=types.SimpleNamespace(toPlainText=lambda: 'text'))
     ABTestWindow.export_pdf(dummy)
-
-    assert recorded.get('args') == ('text', 'out.pdf')
+    expected = {
+        'Описание': [],
+        'Результаты': ['text'],
+        'Визуализации': [],
+        'Интерпретация': [],
+    }
+    assert recorded.get('args') == (expected, 'out.pdf')
 
 
 def test_export_excel_invokes_util(monkeypatch):

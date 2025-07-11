@@ -29,15 +29,22 @@ def validate_numeric(widget, min_val, max_val, percent=False):
         return False
 
 
-def export_pdf(html, filepath):
+def export_pdf(sections, filepath):
+    """Export results following the notebook template into a PDF."""
+    order = ["Описание", "Результаты", "Визуализации", "Интерпретация"]
+
     c = pdfcanvas.Canvas(filepath, pagesize=letter)
     c.setFont(PDF_FONT, 10)
     _, height = letter
-    text = c.beginText(40, height - 40)
-    text.setLeading(12)
-    for line in html.strip().split('\n'):
-        text.textLine(line)
-    c.drawText(text)
+    y = height - 40
+    for name in order:
+        lines = sections.get(name, [])
+        c.drawString(40, y, name)
+        y -= 14
+        for line in lines:
+            c.drawString(60, y, line)
+            y -= 12
+        y -= 10
     c.save()
 
 def export_excel(sections, filepath):

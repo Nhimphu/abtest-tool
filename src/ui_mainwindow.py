@@ -53,10 +53,24 @@ def show_error(parent, msg):
 
 
 class PlotWindow:
-    """Utility for displaying Plotly figures in the user's browser."""
+    """Display Plotly figures in-app when possible."""
 
     def __init__(self, parent=None):
         self.parent = parent
+        try:
+            from PyQt6.QtWebEngineWidgets import QWebEngineView  # type: ignore
+        except Exception:  # pragma: no cover - optional dependency
+            self._view = None
+        else:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout
+
+            dlg = QDialog(parent)
+            dlg.setWindowTitle("Plot")
+            dlg.resize(700, 500)
+            layout = QVBoxLayout(dlg)
+            self._view = QWebEngineView(dlg)
+            layout.addWidget(self._view)
+            self._dialog = dlg
 
     def display_plot(self, fig):
         import tempfile
@@ -64,10 +78,14 @@ class PlotWindow:
         import plotly.io as pio
 
         html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
-        with tempfile.NamedTemporaryFile("w", delete=False, suffix=".html") as f:
-            f.write(html)
-            path = f.name
-        webbrowser.open(f"file://{path}")
+        if getattr(self, "_view", None):
+            self._view.setHtml(html)
+            self._dialog.exec()
+        else:
+            with tempfile.NamedTemporaryFile("w", delete=False, suffix=".html") as f:
+                f.write(html)
+                path = f.name
+            webbrowser.open(f"file://{path}")
 
 
 class ABTestWindow(QMainWindow):
@@ -696,7 +714,13 @@ class ABTestWindow(QMainWindow):
         if not path:
             return
         try:
-            utils.export_pdf(self.results_text.toPlainText(), path)
+            sections = {
+                "Описание": [],
+                "Результаты": self.results_text.toPlainText().splitlines(),
+                "Визуализации": [],
+                "Интерпретация": [],
+            }
+            utils.export_pdf(sections, path)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
