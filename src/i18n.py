@@ -1,104 +1,16 @@
-# i18n.py
+import json
+import locale
+import os
 
-i18n = {
-    "RU": {
-        "title": "Ультимативный Инструмент A/B Тестирования",
-        "baseline_conversion": "Баз. конверсия (%):",
-        "expected_effect": "Ож. эффект (%):",
-        "significance_level": "Уровень знач. (α):",
-        "power": "Мощность (1-β):",
-        "users_a": "A - Пользователи:",
-        "conv_a": "A - Конверсии:",
-        "users_b": "B - Пользователи:",
-        "conv_b": "B - Конверсии:",
-        "users_c": "C - Пользователи:",
-        "conv_c": "C - Конверсии:",
-        "calculate_sample_size": "Рассчитать",
-        "analyze_ab": "Анализ A/B/n",
-        "confidence_intervals": "Дов. интервалы",
-        "bayesian_analysis": "Байес. анализ",
-        "aa_testing": "A/A Тест",
-        "sequential_testing": "Послед. анализ",
-        "clear_results": "Очистить",
-        "pre_exp_data": "Загрузить пред. данные",
-        "calculate_roi": "Рассчитать ROI",
-        "save_plot": "Сохранить график",
-        "switch_lang": "🌐",
-        "power_curve": "Кривая размера выборки",
-        "bootstrap": "Бутстрап",
-        "export_hist_csv": "Экспорт истории CSV",
-        "export_hist_xl": "Экспорт истории Excel",
-        "tutorial": "Туториал",
-        "delete_selected": "Удалить выбранное",
-        "clear_history": "Очистить всё",
-        "file": "Файл",
-        "export_pdf": "Экспорт PDF",
-        "export_excel": "Экспорт Excel",
-        "export_csv": "Экспорт CSV",
-        "expected_fpr": "Ожидаемая ошибка I рода",
-        "actual_fpr": "Фактическая ошибка I рода",
-        "splitting_correct": "Сплитование корректно",
-        "check_splitting": "Проверьте сплитование",
-        "significant": "Значимо",
-        "not_significant": "Не значимо",
-        "winner": "Победитель",
-        "early_stopping": "Раннее завершение",
-        "no_result": "Нет результата",
-        "interpretation": "Интерпретация",
-        "roi_result": "Результат ROI",
-    },
-    "EN": {
-        "title": "Ultimate A/B Testing Tool",
-        "baseline_conversion": "Base Conversion (%):",
-        "expected_effect": "Expected Effect (%):",
-        "significance_level": "Significance Level (α):",
-        "power": "Power (1-β):",
-        "users_a": "A - Users:",
-        "conv_a": "A - Conversions:",
-        "users_b": "B - Users:",
-        "conv_b": "B - Conversions:",
-        "users_c": "C - Users:",
-        "conv_c": "C - Conversions:",
-        "calculate_sample_size": "Calculate",
-        "analyze_ab": "A/B/n Analysis",
-        "confidence_intervals": "Confidence Intervals",
-        "bayesian_analysis": "Bayesian Analysis",
-        "aa_testing": "A/A Test",
-        "sequential_testing": "Sequential Analysis",
-        "clear_results": "Clear",
-        "pre_exp_data": "Load Pre-exp Data",
-        "calculate_roi": "Calculate ROI",
-        "save_plot": "Save Plot",
-        "switch_lang": "🌐",
-        "power_curve": "Sample Size Curve",
-        "bootstrap": "Bootstrap",
-        "export_hist_csv": "Export history CSV",
-        "export_hist_xl": "Export history Excel",
-        "tutorial": "Tutorial",
-        "delete_selected": "Delete Selected",
-        "clear_history": "Clear All",
-        "file": "File",
-        "export_pdf": "Export PDF",
-        "export_excel": "Export Excel",
-        "export_csv": "Export CSV",
-        "expected_fpr": "Expected FPR",
-        "actual_fpr": "Actual FPR",
-        "splitting_correct": "Splitting correct",
-        "check_splitting": "Check splitting",
-        "significant": "Significant",
-        "not_significant": "Not significant",
-        "winner": "Winner",
-        "early_stopping": "Early stopping",
-        "no_result": "No result",
-        "interpretation": "Interpretation",
-        "roi_result": "ROI Result",
-    },
-}
+
+HERE = os.path.dirname(__file__)
+TRANSLATIONS_PATH = os.path.join(HERE, "i18n.json")
+
+with open(TRANSLATIONS_PATH, "r", encoding="utf-8") as f:
+    i18n = json.load(f)
 
 
 def detect_language() -> str:
     """Return 'RU' if OS locale starts with ru, else 'EN'."""
-    import locale
-
-    loc = locale.getdefaultlocale()[0] or ''
-    return 'RU' if loc.lower().startswith('ru') else 'EN'
+    loc = locale.getdefaultlocale()[0] or ""
+    return "RU" if loc.lower().startswith("ru") else "EN"
