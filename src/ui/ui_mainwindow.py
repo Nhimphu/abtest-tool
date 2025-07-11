@@ -2,6 +2,8 @@
 
 import sys
 import sqlite3
+
+from migrations_runner import run_migrations
 import csv
 from typing import Dict
 import json
@@ -377,25 +379,7 @@ class ABTestWindow(QMainWindow):
 
     def _init_history_db(self):
         self.conn = sqlite3.connect("history.db")
-        c = self.conn.cursor()
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT,
-                test TEXT,
-                result TEXT
-            )"""
-        )
-        c.execute(
-            """
-            CREATE TABLE IF NOT EXISTS session_states (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                payload TEXT,
-                timestamp TEXT
-            )"""
-        )
-        self.conn.commit()
+        run_migrations(self.conn)
 
     def _load_history(self):
         c = self.conn.cursor()
