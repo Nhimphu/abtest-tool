@@ -18,7 +18,12 @@ def create_app() -> Flask:
     jwt = JWTManager(app)
 
     swaggerui_blueprint = get_swaggerui_blueprint(
-        "/docs", "/spec", config={"app_name": "Flags API"}
+        "/docs",
+        "/spec",
+        config={
+            "app_name": "Flags API",
+            "supportedSubmitMethods": ["get", "post", "put", "delete"],
+        },
     )
     app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
     store = FeatureFlagStore()
@@ -60,7 +65,13 @@ def create_app() -> Flask:
         spec = {
             "openapi": "3.0.0",
             "info": {"title": "Flags API", "version": "1.0"},
+            "servers": [{"url": "/"}],
             "paths": {
+                "/login": {"post": {"responses": {"200": {"description": "Login"}}}},
+                "/refresh": {
+                    "post": {"responses": {"200": {"description": "Refresh"}}}
+                },
+                "/metrics": {"get": {"responses": {"200": {"description": "Metrics"}}}},
                 "/flags": {
                     "get": {"responses": {"200": {"description": "List flags"}}},
                     "post": {"responses": {"201": {"description": "Created"}}},
