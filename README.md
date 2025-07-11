@@ -4,7 +4,7 @@ GUI-приложение для расчёта sample size, A/B/n анализо
 git clone https://github.com/Nhimphu/abtest-tool.git
 cd abtest-tool
 python -m venv venv
-venv\Scripts\Activate.ps1
+venv\Scripts\Activate
 pip install -r requirements.txt
 python src/main.py
 
