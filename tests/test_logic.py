@@ -209,3 +209,9 @@ def test_segment_and_metric():
     assert len(seg) == 1
     metric = compute_custom_metric(data, 'sum("conv")/sum("users")')
     assert 0 < metric < 1
+
+
+def test_compute_custom_metric_rejects_eval(monkeypatch):
+    data = [{'users': 1, 'conv': 1}]
+    with pytest.raises(ValueError):
+        compute_custom_metric(data, '__import__("os").system("echo hi")')
