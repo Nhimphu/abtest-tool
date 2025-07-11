@@ -4,6 +4,8 @@ from flask_swagger_ui import get_swaggerui_blueprint
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
+    create_refresh_token,
+    get_jwt_identity,
     jwt_required,
 )
 from flags import FeatureFlagStore
@@ -34,9 +36,17 @@ def create_app() -> Flask:
     def login():
         data = request.get_json(force=True)
         if data.get("username") == "admin" and data.get("password") == "admin":
-            token = create_access_token(identity="admin")
-            return jsonify(access_token=token)
+            access = create_access_token(identity="admin")
+            refresh = create_refresh_token(identity="admin")
+            return jsonify(access_token=access, refresh_token=refresh)
         return jsonify({"msg": "Bad credentials"}), 401
+
+    @app.post("/refresh")
+    @jwt_required(refresh=True)
+    def refresh():
+        identity = get_jwt_identity()
+        token = create_access_token(identity=identity)
+        return jsonify(access_token=token)
 
     @app.route("/flags", methods=["GET"])
     @jwt_required()
