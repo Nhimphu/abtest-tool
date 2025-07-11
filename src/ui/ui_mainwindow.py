@@ -38,11 +38,29 @@ from PyQt6.QtGui import (
     QDoubleValidator,
     QAction,
 )
-from PyQt6.QtCore import Qt, QDateTime
+try:
+    from PyQt6.QtCore import Qt, QDateTime, QEvent
+except Exception:  # pragma: no cover - optional
+    from PyQt6.QtCore import Qt, QDateTime  # type: ignore
+    class QEvent:
+        class Type:
+            FocusIn = 0
+            FocusOut = 1
 
 from .widgets import with_help_label
 
 from .login import LoginDialog
+
+try:
+    from PyQt6.QtWidgets import QStatusBar
+except Exception:  # pragma: no cover - optional
+    class QStatusBar:
+        def __init__(self, *a, **k):
+            pass
+        def showMessage(self, *a, **k):
+            pass
+        def clearMessage(self):
+            pass
 
 try:  # Optional dependency
     from PyQt6.QtWebEngineWidgets import QWebEngineView  # type: ignore
@@ -381,6 +399,8 @@ class ABTestWindow(QMainWindow):
         self._prepare_widgets()
         # Строим интерфейс
         self._build_ui()
+        # Устанавливаем фильтры событий
+        self._install_event_filters()
         # Применяем тёмную тему
         self.apply_dark_theme()
         # Загружаем историю
@@ -545,6 +565,7 @@ class ABTestWindow(QMainWindow):
         self.baseline_slider.setValue(40)
         self.baseline_slider.valueChanged.connect(self.update_ui_text)
         self.baseline_slider.setToolTip(self.i18n[self.lang]["tooltip.baseline"])
+        self.baseline_slider.setStatusTip(self.i18n[self.lang]["help.baseline"])
         self.baseline_label = QLabel()
 
         self.uplift_slider = QSlider(Qt.Orientation.Horizontal)
@@ -552,6 +573,7 @@ class ABTestWindow(QMainWindow):
         self.uplift_slider.setValue(100)
         self.uplift_slider.valueChanged.connect(self.update_ui_text)
         self.uplift_slider.setToolTip(self.i18n[self.lang]["tooltip.uplift"])
+        self.uplift_slider.setStatusTip(self.i18n[self.lang]["help.uplift"])
         self.uplift_label = QLabel()
 
         self.alpha_slider = QSlider(Qt.Orientation.Horizontal)
@@ -559,6 +581,7 @@ class ABTestWindow(QMainWindow):
         self.alpha_slider.setValue(5)
         self.alpha_slider.valueChanged.connect(self.update_ui_text)
         self.alpha_slider.setToolTip(self.i18n[self.lang]["tooltip.alpha"])
+        self.alpha_slider.setStatusTip(self.i18n[self.lang]["help.alpha"])
         self.alpha_label = QLabel()
 
         self.power_slider = QSlider(Qt.Orientation.Horizontal)
@@ -566,12 +589,14 @@ class ABTestWindow(QMainWindow):
         self.power_slider.setValue(90)
         self.power_slider.valueChanged.connect(self.update_ui_text)
         self.power_slider.setToolTip(self.i18n[self.lang]["tooltip.power"])
+        self.power_slider.setStatusTip(self.i18n[self.lang]["help.power"])
         self.power_label = QLabel()
 
         # Кнопка расчёта
         self.calc_button = QPushButton()
         self.calc_button.clicked.connect(self.calculate_sample_size)
         self.calc_button.setToolTip(self.i18n[self.lang]["tooltip.calc"])
+        self.calc_button.setStatusTip(self.i18n[self.lang]["help.calc"])
 
         # Поля A/B/C
         for G in ["A", "B", "C"]:
@@ -590,21 +615,27 @@ class ABTestWindow(QMainWindow):
         self.analyze_button = QPushButton()
         self.analyze_button.clicked.connect(self._on_analyze)
         self.analyze_button.setToolTip(self.i18n[self.lang]["tooltip.analyze"])
+        self.analyze_button.setStatusTip(self.i18n[self.lang]["help.analyze"])
         self.conf_button = QPushButton()
         self.conf_button.clicked.connect(self._on_plot_confidence_intervals)
         self.conf_button.setToolTip(self.i18n[self.lang]["tooltip.confidence"])
+        self.conf_button.setStatusTip(self.i18n[self.lang]["help.confidence"])
         self.bayes_button = QPushButton()
         self.bayes_button.clicked.connect(self._on_run_bayesian)
         self.bayes_button.setToolTip(self.i18n[self.lang]["tooltip.bayesian"])
+        self.bayes_button.setStatusTip(self.i18n[self.lang]["help.bayesian"])
         self.aa_button = QPushButton()
         self.aa_button.clicked.connect(self._on_run_aa)
         self.aa_button.setToolTip(self.i18n[self.lang]["tooltip.aa"])
+        self.aa_button.setStatusTip(self.i18n[self.lang]["help.aa"])
         self.seq_button = QPushButton()
         self.seq_button.clicked.connect(self._on_run_sequential)
         self.seq_button.setToolTip(self.i18n[self.lang]["tooltip.sequential"])
+        self.seq_button.setStatusTip(self.i18n[self.lang]["help.sequential"])
         self.obf_button = QPushButton()
         self.obf_button.clicked.connect(self._on_run_obrien_fleming)
         self.obf_button.setToolTip(self.i18n[self.lang]["tooltip.obf"])
+        self.obf_button.setStatusTip(self.i18n[self.lang]["help.obf"])
 
         # Priors для байес
         self.prior_alpha_spin = QDoubleSpinBox()
@@ -638,25 +669,33 @@ class ABTestWindow(QMainWindow):
         self.roi_button = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
         self.roi_button.setToolTip(self.i18n[self.lang]["tooltip.roi"])
+        self.roi_button.setStatusTip(self.i18n[self.lang]["help.roi"])
 
         # Графики
         self.plot_ci_button = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
         self.plot_ci_button.setToolTip(self.i18n[self.lang]["tooltip.plot_ci"])
+        self.plot_ci_button.setStatusTip(self.i18n[self.lang]["help.plot_ci"])
         self.plot_power_button = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
         self.plot_power_button.setToolTip(self.i18n[self.lang]["tooltip.plot_power"])
+        self.plot_power_button.setStatusTip(self.i18n[self.lang]["help.plot_power"])
         self.plot_alpha_button = QPushButton()
         self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
         self.plot_alpha_button.setToolTip(self.i18n[self.lang]["tooltip.plot_alpha"])
+        self.plot_alpha_button.setStatusTip(self.i18n[self.lang]["help.plot_alpha"])
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
         self.plot_bootstrap_button.setToolTip(
             self.i18n[self.lang]["tooltip.plot_bootstrap"]
         )
+        self.plot_bootstrap_button.setStatusTip(
+            self.i18n[self.lang]["help.plot_bootstrap"]
+        )
         self.save_plot_button = QPushButton()
         self.save_plot_button.clicked.connect(self._save_current_plot)
         self.save_plot_button.setToolTip(self.i18n[self.lang]["tooltip.save_plot"])
+        self.save_plot_button.setStatusTip(self.i18n[self.lang]["help.save_plot"])
 
         # Area to embed Plotly plots if QtWebEngine is available
         self._last_fig = None
@@ -677,11 +716,15 @@ class ABTestWindow(QMainWindow):
         self.load_pre_exp_button.setToolTip(
             self.i18n[self.lang]["tooltip.load_pre_exp"]
         )
+        self.load_pre_exp_button.setStatusTip(
+            self.i18n[self.lang]["help.load_pre_exp"]
+        )
         self.clear_button = QPushButton()
         self.clear_button.clicked.connect(
             lambda: self.results_text.setHtml("<pre></pre>")
         )
         self.clear_button.setToolTip(self.i18n[self.lang]["tooltip.clear"])
+        self.clear_button.setStatusTip(self.i18n[self.lang]["help.clear"])
 
         # История
         self.history_table = QTableWidget(0, 5)
@@ -697,10 +740,16 @@ class ABTestWindow(QMainWindow):
         self.del_selected_button.setToolTip(
             self.i18n[self.lang]["tooltip.delete_selected"]
         )
+        self.del_selected_button.setStatusTip(
+            self.i18n[self.lang]["help.delete_selected"]
+        )
         self.clear_history_button = QPushButton()
         self.clear_history_button.clicked.connect(self._clear_all_history)
         self.clear_history_button.setToolTip(
             self.i18n[self.lang]["tooltip.clear_history"]
+        )
+        self.clear_history_button.setStatusTip(
+            self.i18n[self.lang]["help.clear_history"]
         )
 
     # ————— Построение интерфейса —————
@@ -708,6 +757,8 @@ class ABTestWindow(QMainWindow):
     def _build_ui(self):
         cw = QWidget()
         self.setCentralWidget(cw)
+        self.status = QStatusBar()
+        self.setStatusBar(self.status)
         ml = QVBoxLayout(cw)
 
         # Вкладки
@@ -815,6 +866,33 @@ class ABTestWindow(QMainWindow):
         # Меню
         self._build_menu()
 
+    def _install_event_filters(self):
+        widgets = [
+            self.baseline_slider,
+            self.uplift_slider,
+            self.alpha_slider,
+            self.power_slider,
+            self.calc_button,
+            self.analyze_button,
+            self.conf_button,
+            self.bayes_button,
+            self.aa_button,
+            self.seq_button,
+            self.obf_button,
+            self.roi_button,
+            self.plot_ci_button,
+            self.plot_power_button,
+            self.plot_alpha_button,
+            self.plot_bootstrap_button,
+            self.save_plot_button,
+            self.load_pre_exp_button,
+            self.clear_button,
+            self.del_selected_button,
+            self.clear_history_button,
+        ]
+        for w in widgets:
+            w.installEventFilter(self)
+
     def _build_menu(self):
         L = self.i18n[self.lang]
         mb = self.menuBar()
@@ -863,6 +941,15 @@ class ABTestWindow(QMainWindow):
         self.theme_button.clicked.connect(self.toggle_theme)
         cl.addWidget(self.theme_button)
         mb.setCornerWidget(cw, Qt.Corner.TopRightCorner)
+
+    def eventFilter(self, obj, event):
+        if event.type() == QEvent.Type.FocusIn:
+            tip = getattr(obj, "statusTip", lambda: "")()
+            if tip:
+                self.status.showMessage(tip)
+        elif event.type() == QEvent.Type.FocusOut:
+            self.status.clearMessage()
+        return super().eventFilter(obj, event)
 
     def apply_dark_theme(self):
         p = QPalette()
