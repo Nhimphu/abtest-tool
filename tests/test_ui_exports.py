@@ -135,8 +135,8 @@ sys.modules['PyQt6.QtWidgets'] = widgets_mod
 sys.modules['PyQt6.QtGui'] = gui_mod
 sys.modules['PyQt6.QtCore'] = core_mod
 
-import ui_mainwindow
-from ui_mainwindow import ABTestWindow, QFileDialog, utils
+import ui.ui_mainwindow as ui_mainwindow
+from ui.ui_mainwindow import ABTestWindow, QFileDialog, utils
 
 
 def test_export_pdf_invokes_util(monkeypatch):
