@@ -341,6 +341,10 @@ class AddDataSourceDialog:
             self.rows[key][0].setVisible(is_bq)
         for key in ["host", "port", "database", "user", "password"]:
             self.rows[key][0].setVisible(not is_bq)
+        if hasattr(self._dialog, "adjustSize"):
+            self._dialog.adjustSize()
+        if hasattr(self._dialog, "setFixedSize") and hasattr(self._dialog, "sizeHint"):
+            self._dialog.setFixedSize(self._dialog.sizeHint())
 
     def data(self) -> Dict[str, str]:
         if self.type_combo.currentText() == "BigQuery":
