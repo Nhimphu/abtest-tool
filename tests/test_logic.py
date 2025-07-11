@@ -16,8 +16,23 @@ if 'numpy' not in sys.modules:
         step = (b - a) / (n - 1)
         return [a + step * i for i in range(n)]
     np_mod.linspace = linspace
+    np_mod.asarray = lambda x, dtype=None: list(x)
+    np_mod.argmax = lambda arr: arr.index(max(arr))
+    def cov(a, b, ddof=1):
+        mean_a = sum(a) / len(a)
+        mean_b = sum(b) / len(b)
+        cov_ab = sum((ai - mean_a) * (bi - mean_b) for ai, bi in zip(a, b)) / (len(a)-ddof)
+        var_a = sum((ai - mean_a) ** 2 for ai in a) / (len(a)-ddof)
+        var_b = sum((bi - mean_b) ** 2 for bi in b) / (len(a)-ddof)
+        return [[var_a, cov_ab], [cov_ab, var_b]]
+    np_mod.cov = cov
+    np_mod.var = lambda x, ddof=1: sum((xi - sum(x)/len(x))**2 for xi in x) / (len(x)-ddof)
     np_mod.trapz = lambda y, x: sum((y[i] + y[i+1]) * (x[i+1] - x[i]) / 2 for i in range(len(y)-1))
-    np_mod.random = types.SimpleNamespace(binomial=lambda n, p, size=None: [0])
+    np_mod.random = types.SimpleNamespace(
+        binomial=lambda n, p, size=None: [0],
+        randint=lambda a, b=None: 0,
+        random=lambda: 0.0,
+    )
     sys.modules['numpy'] = np_mod
 
 if 'scipy.stats' not in sys.modules:
@@ -33,6 +48,7 @@ if 'scipy.stats' not in sys.modules:
     stats_mod.norm = Norm
     stats_mod.beta = types.SimpleNamespace(pdf=lambda *a, **k: None,
                                            cdf=lambda *a, **k: None)
+    stats_mod.chi2 = types.SimpleNamespace(cdf=lambda x, df: 1 - math.exp(-x/2))
     scipy_mod = types.ModuleType('scipy')
     scipy_mod.stats = stats_mod
     sys.modules['scipy'] = scipy_mod
@@ -41,6 +57,13 @@ if 'scipy.stats' not in sys.modules:
 if 'plotly.graph_objects' not in sys.modules:
     plotly_mod = types.ModuleType('plotly')
     go_mod = types.ModuleType('graph_objects')
+    class _Fig:
+        def add_trace(self, *a, **k):
+            pass
+        def update_layout(self, *a, **k):
+            pass
+    go_mod.Figure = lambda *a, **k: _Fig()
+    go_mod.Scatter = lambda *a, **k: object()
     plotly_mod.graph_objects = go_mod
     sys.modules['plotly'] = plotly_mod
     sys.modules['plotly.graph_objects'] = go_mod
@@ -53,6 +76,7 @@ if 'PyQt6.QtWidgets' not in sys.modules:
         def getSaveFileName(*args, **kwargs):
             return ('', '')
     widgets_mod.QFileDialog = QFileDialog
+    widgets_mod.QComboBox = type('QComboBox', (), {})
     class QMessageBox:
         @staticmethod
         def critical(*args, **kwargs):
@@ -92,6 +116,14 @@ from logic import (
     required_sample_size,
     evaluate_abn_test,
     run_obrien_fleming,
+    cuped_adjustment,
+    srm_check,
+    pocock_alpha_curve,
+    ucb1,
+    epsilon_greedy,
+    plot_alpha_spending,
+    segment_data,
+    compute_custom_metric,
 )
 
 
@@ -127,3 +159,45 @@ def test_run_obrien_fleming_steps():
     steps = run_obrien_fleming(100, 10, 100, 20, alpha=0.05, looks=3)
     assert isinstance(steps, list) and steps
     assert 'threshold' in steps[0]
+
+def test_cuped_no_change_with_zero_covariate():
+    x = [1, 2, 3]
+    adjusted = cuped_adjustment(x, [0, 0, 0])
+    assert all(math.isclose(a, b) for a, b in zip(x, adjusted))
+
+
+def test_srm_check_detects_imbalance():
+    flag, p = srm_check(1000, 500)
+    assert flag and p < 0.05
+
+
+def test_pocock_alpha_curve_len():
+    curve = pocock_alpha_curve(0.05, 3)
+    assert len(curve) == 3 and all(0 < a < 0.05 for a in curve)
+    assert math.isclose(sum(curve), 0.05)
+
+
+def test_ucb1_selects_unseen_arm():
+    arm = ucb1([1.0, 1.0], [10, 0])
+    assert arm == 1
+
+
+def test_epsilon_greedy_random(monkeypatch):
+    arm = epsilon_greedy([1.0, 2.0], [1, 1], epsilon=1.0)
+    assert arm in (0, 1)
+
+
+def test_plot_alpha_spending_returns_fig():
+    fig = plot_alpha_spending(0.05, 3)
+    assert fig is not None
+
+
+def test_segment_and_metric():
+    data = [
+        {'device': 'mobile', 'users': 10, 'conv': 2},
+        {'device': 'desktop', 'users': 5, 'conv': 1},
+    ]
+    seg = segment_data(data, device='mobile')
+    assert len(seg) == 1
+    metric = compute_custom_metric(data, 'sum("conv")/sum("users")')
+    assert 0 < metric < 1

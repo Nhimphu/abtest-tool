@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from scipy.stats import norm, beta
+from scipy.stats import norm, beta, chi2
 import plotly.graph_objects as go
 from PyQt6.QtWidgets import QFileDialog
 
@@ -326,4 +326,86 @@ def save_plot():
     path, _ = QFileDialog.getSaveFileName(None, "Save plot", "", "PNG Files (*.png);;PDF Files (*.pdf)")
     if path:
         plt.savefig(path)
+
+
+# --------- Additional Methods ---------
+
+def cuped_adjustment(x, covariate):
+    """Return CUPED-adjusted metric array."""
+    x = [float(v) for v in x]
+    c = [float(v) for v in covariate]
+    mean_x = sum(x) / len(x)
+    mean_c = sum(c) / len(c)
+    cov = sum((xi - mean_x) * (ci - mean_c) for xi, ci in zip(x, c)) / (len(x) - 1)
+    var_c = sum((ci - mean_c) ** 2 for ci in c) / (len(c) - 1)
+    if var_c == 0:
+        return x
+    theta = cov / var_c
+    return [xi - theta * ci for xi, ci in zip(x, c)]
+
+
+def srm_check(users_a, users_b, alpha=0.05):
+    """Simple SRM check using chi-square test."""
+    total = users_a + users_b
+    expected = total / 2
+    chi_sq = ((users_a - expected) ** 2) / expected + ((users_b - expected) ** 2) / expected
+    p = 1 - chi2.cdf(chi_sq, df=1)
+    return p < alpha, p
+
+
+def pocock_alpha_curve(alpha, looks):
+    """Return Pocock alpha spending thresholds per look."""
+    if looks <= 0:
+        raise ValueError("looks must be positive")
+    return [alpha / looks for _ in range(looks)]
+
+
+def ucb1(values, counts):
+    """Return index of arm to select using UCB1."""
+    t = sum(counts) + 1
+    ucb_values = [v / c + math.sqrt(2 * math.log(t) / c) if c > 0 else float('inf')
+                  for v, c in zip(values, counts)]
+    return int(np.argmax(ucb_values))
+
+
+def epsilon_greedy(values, counts, epsilon=0.1):
+    """Return index of arm using epsilon-greedy selection."""
+    if np.random.random() < epsilon or not any(counts):
+        return int(np.random.randint(0, len(values)))
+    avgs = [v / c if c > 0 else 0.0 for v, c in zip(values, counts)]
+    return int(np.argmax(avgs))
+
+
+def plot_alpha_spending(alpha, looks):
+    """Return Plotly figure of Pocock and O'Brien-Fleming alpha spending."""
+    pocock = pocock_alpha_curve(alpha, looks)
+    obf = [
+        2 * (1 - norm.cdf(norm.ppf(1 - alpha / 2) / math.sqrt(i)))
+        for i in range(1, looks + 1)
+    ]
+    fig = go.Figure()
+    fig.add_trace(
+        go.Scatter(x=list(range(1, looks + 1)), y=pocock, mode="lines+markers", name="Pocock")
+    )
+    fig.add_trace(
+        go.Scatter(x=list(range(1, looks + 1)), y=obf, mode="lines+markers", name="O'Brien-Fleming")
+    )
+    fig.update_layout(
+        title="Alpha Spending", xaxis_title="Look", yaxis_title="Alpha", margin=dict(l=40, r=20, t=50, b=40)
+    )
+    return fig
+
+
+def segment_data(records, **filters):
+    """Return subset of records matching simple equality filters."""
+    return [r for r in records if all(r.get(k) == v for k, v in filters.items())]
+
+
+def compute_custom_metric(records, expression):
+    """Evaluate expression like 'sum(conv)/sum(users)' on record list."""
+    env = {
+        'sum': lambda field: sum(float(r.get(field, 0)) for r in records),
+        'len': lambda _: len(records)
+    }
+    return eval(expression, {}, env)
 

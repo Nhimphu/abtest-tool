@@ -15,3 +15,4 @@ setuptools==80.9.0
 tzdata==2025.2
 pytest==8.1.1
 Flask==3.0.3
+coverage==7.5.1

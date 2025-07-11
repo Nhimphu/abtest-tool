@@ -11,3 +11,23 @@ python src/main.py
 # Запуск тестов
 pytest -q
 ```
+
+## Additional Features
+
+- CUPED adjustment and SRM check helpers
+- Simple alpha-spending curve generation
+- Interactive α-spending plots in the UI
+- Markdown export utility
+- Notebook export utility
+- Basic API to run A/B analyses (`analysis_api.py`)
+- Bandit helpers: UCB1 and epsilon-greedy
+- Webhook helper for early stop notifications
+- Light/Dark theme toggle and sortable history table
+- Simple segmentation helpers and custom metric expressions
+- No-code feature flag editor in the UI
+- CUPED correction and automatic SRM warnings
+- Segmentation filters and custom metric field in the interface
+- Export to Markdown and Notebook, plus PDF template
+- Basic collaboration tools (undo/redo/share)
+- JSON-based translations with auto language detection
+

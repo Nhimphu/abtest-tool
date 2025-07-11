@@ -7,7 +7,23 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Stubs for optional dependencies
 if 'numpy' not in sys.modules:
-    sys.modules['numpy'] = types.ModuleType('numpy')
+    np_mod = types.ModuleType('numpy')
+    np_mod.asarray = lambda x, dtype=None: list(x)
+    np_mod.argmax = lambda arr: arr.index(max(arr))
+    def cov(a, b, ddof=1):
+        mean_a = sum(a) / len(a)
+        mean_b = sum(b) / len(b)
+        cov_ab = sum((ai - mean_a) * (bi - mean_b) for ai, bi in zip(a, b)) / (len(a)-ddof)
+        var_a = sum((ai - mean_a) ** 2 for ai in a) / (len(a)-ddof)
+        var_b = sum((bi - mean_b) ** 2 for bi in b) / (len(a)-ddof)
+        return [[var_a, cov_ab], [cov_ab, var_b]]
+    np_mod.cov = cov
+    np_mod.var = lambda x, ddof=1: sum((xi - sum(x)/len(x))**2 for xi in x) / (len(x)-ddof)
+    np_mod.random = types.SimpleNamespace(
+        randint=lambda a, b=None: 0,
+        random=lambda: 0.0,
+    )
+    sys.modules['numpy'] = np_mod
 
 if 'scipy.stats' not in sys.modules:
     nd = statistics.NormalDist()
@@ -22,6 +38,7 @@ if 'scipy.stats' not in sys.modules:
     stats_mod.norm = Norm
     stats_mod.beta = types.SimpleNamespace(pdf=lambda *a, **k: None,
                                            cdf=lambda *a, **k: None)
+    stats_mod.chi2 = types.SimpleNamespace(cdf=lambda x, df: 1 - math.exp(-x/2))
     scipy_mod = types.ModuleType('scipy')
     scipy_mod.stats = stats_mod
     sys.modules['scipy'] = scipy_mod
@@ -73,7 +90,7 @@ widget_names = [
     'QApplication','QMainWindow','QWidget','QVBoxLayout','QHBoxLayout',
     'QGridLayout','QLabel','QLineEdit','QPushButton','QSlider',
     'QDoubleSpinBox','QTabWidget','QTableWidget','QTableWidgetItem',
-    'QTextBrowser','QWizard','QWizardPage'
+    'QTextBrowser','QWizard','QWizardPage','QComboBox','QInputDialog','QCheckBox'
 ]
 for name in widget_names:
     if not hasattr(widgets_mod, name):
@@ -149,5 +166,16 @@ def test_export_csv_invokes_util(monkeypatch):
     ABTestWindow.export_csv(dummy)
 
     assert recorded.get('args') == ({'Results': ['line1', 'line2']}, 'out.csv')
+
+
+def test_export_notebook_invokes_util(monkeypatch):
+    recorded = {}
+    monkeypatch.setattr(QFileDialog, 'getSaveFileName', lambda *a, **k: ('out.ipynb', ''))
+    monkeypatch.setattr(utils, 'export_notebook', lambda sec, path: recorded.setdefault('args', (sec, path)))
+
+    dummy = types.SimpleNamespace(results_text=types.SimpleNamespace(toPlainText=lambda: 'line1\nline2'))
+    ABTestWindow.export_notebook(dummy)
+
+    assert recorded.get('args') == ({'Results': ['line1', 'line2']}, 'out.ipynb')
 
 

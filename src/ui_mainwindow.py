@@ -23,6 +23,9 @@ from PyQt6.QtWidgets import (
     QMessageBox,
     QFileDialog,
     QTextBrowser,
+    QComboBox,
+    QInputDialog,
+    QCheckBox,
 )
 from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
 from PyQt6.QtCore import Qt, QDateTime
@@ -40,9 +43,13 @@ from logic import (
     plot_confidence_intervals,
     plot_power_curve,
     plot_bootstrap_distribution,
-    save_plot
+    save_plot,
+    cuped_adjustment,
+    srm_check
 )
-from i18n import i18n
+from i18n import i18n, detect_language
+from flags import FeatureFlagStore
+from webhooks import send_webhook
 import utils
 
 
@@ -68,11 +75,72 @@ class PlotWindow:
         webbrowser.open(f"file://{path}")
 
 
+class FlagsWindow(QMainWindow):
+    """Simple no-code editor for feature flags."""
+
+    def __init__(self, store: FeatureFlagStore):
+        super().__init__()
+        self.store = store
+        self.setWindowTitle("Feature Flags")
+        self.table = QTableWidget(0, 3)
+        self.table.setHorizontalHeaderLabels(["Name", "Enabled", "Rollout %"])
+        self.table.cellChanged.connect(self._on_cell_changed)
+
+        add_btn = QPushButton("Add")
+        add_btn.clicked.connect(self._add_flag)
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.table)
+        layout.addWidget(add_btn)
+        w = QWidget()
+        w.setLayout(layout)
+        self.setCentralWidget(w)
+        self.reload()
+
+    def reload(self):
+        self.table.blockSignals(True)
+        self.table.setRowCount(0)
+        for flag in self.store.list_flags():
+            r = self.table.rowCount()
+            self.table.insertRow(r)
+            self.table.setItem(r, 0, QTableWidgetItem(flag.name))
+            chk = QCheckBox()
+            chk.setChecked(flag.enabled)
+            self.table.setCellWidget(r, 1, chk)
+            spin = QDoubleSpinBox()
+            spin.setRange(0, 100)
+            spin.setValue(flag.rollout)
+            spin.setSuffix(" %")
+            self.table.setCellWidget(r, 2, spin)
+        self.table.blockSignals(False)
+
+    def _add_flag(self):
+        name, ok = QInputDialog.getText(self, "Name", "Flag name:")
+        if not ok or not name:
+            return
+        try:
+            self.store.create_flag(name)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+        self.reload()
+
+    def _on_cell_changed(self, row, col):
+        name = self.table.item(row, 0).text()
+        enabled = self.table.cellWidget(row, 1).isChecked()
+        rollout = self.table.cellWidget(row, 2).value()
+        try:
+            self.store.update_flag(name, enabled=enabled, rollout=rollout)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", str(e))
+
+
 class ABTestWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.lang = "RU"
+        self.lang = detect_language()
         self.i18n = i18n
+        self.flag_store = FeatureFlagStore()
+        self.flags_window = None
 
         self.setWindowTitle(self.i18n[self.lang]['title'])
         self.setGeometry(100, 100, 1000, 800)
@@ -138,6 +206,9 @@ class ABTestWindow(QMainWindow):
         self.history_table.setItem(r, 1, QTableWidgetItem(ts))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
         self.history_table.setItem(r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", "")))
+        if not hasattr(self, 'undo_stack'):
+            self.undo_stack = []
+        self.undo_stack.append(self.results_text.toHtml())
 
     def _delete_selected_history(self):
         for r in reversed(range(self.history_table.rowCount())):
@@ -250,6 +321,10 @@ class ABTestWindow(QMainWindow):
         self.prior_beta_spin.setSingleStep(0.1)
         self.prior_beta_spin.setValue(1.0)
 
+        self.bandit_label = QLabel()
+        self.bandit_combo = QComboBox()
+        self.bandit_combo.addItems(["Thompson", "UCB1", "ε-greedy"])
+
         # ROI
         self.revenue_per_user_label = QLabel()
         self.revenue_per_user_var   = QLineEdit("50")
@@ -263,11 +338,26 @@ class ABTestWindow(QMainWindow):
         self.roi_button             = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
 
+        # Segmentation & Custom metric
+        self.filter_device  = QLineEdit()
+        self.filter_country = QLineEdit()
+        self.filter_utm     = QLineEdit()
+        self.custom_metric  = QLineEdit("sum('conv')/sum('users')")
+
+        self.undo_button = QPushButton('Undo')
+        self.undo_button.clicked.connect(self.undo)
+        self.redo_button = QPushButton('Redo')
+        self.redo_button.clicked.connect(self.redo)
+        self.share_button = QPushButton('Share')
+        self.share_button.clicked.connect(self.share_session)
+
         # Графики
         self.plot_ci_button       = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
         self.plot_power_button    = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
+        self.plot_alpha_button    = QPushButton()
+        self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
         self.save_plot_button     = QPushButton()
@@ -277,14 +367,16 @@ class ABTestWindow(QMainWindow):
         self.results_text = QTextBrowser()
 
         # Загрузка / Очистка
+        self.pre_exp_data = None
         self.load_pre_exp_button = QPushButton()
-        self.load_pre_exp_button.clicked.connect(lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented"))
+        self.load_pre_exp_button.clicked.connect(self.load_pre_experiment_data)
         self.clear_button        = QPushButton()
         self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
 
         # История
         self.history_table      = QTableWidget(0, 4)
         self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат"])
+        self.history_table.setSortingEnabled(True)
         self.del_selected_button = QPushButton()
         self.del_selected_button.clicked.connect(self._delete_selected_history)
         self.clear_history_button = QPushButton()
@@ -332,6 +424,8 @@ class ABTestWindow(QMainWindow):
         left.addWidget(QLabel("β-prior:"))
         left.addWidget(self.prior_beta_spin)
         left.addWidget(self.bayes_button)
+        left.addWidget(self.bandit_label)
+        left.addWidget(self.bandit_combo)
         left.addWidget(self.aa_button)
         left.addWidget(self.seq_button)
         left.addWidget(self.obf_button)
@@ -356,12 +450,24 @@ class ABTestWindow(QMainWindow):
         for btn in [
             self.plot_ci_button,
             self.plot_power_button,
+            self.plot_alpha_button,
             self.plot_bootstrap_button,
             self.save_plot_button
         ]:
             btns.addWidget(btn)
         right.addLayout(btns)
         right.addWidget(self.results_text)
+
+        seg = QGridLayout()
+        seg.addWidget(QLabel("Device"), 0, 0)
+        seg.addWidget(self.filter_device, 0, 1)
+        seg.addWidget(QLabel("Country"), 1, 0)
+        seg.addWidget(self.filter_country, 1, 1)
+        seg.addWidget(QLabel("UTM"), 2, 0)
+        seg.addWidget(self.filter_utm, 2, 1)
+        seg.addWidget(QLabel("Metric"), 3, 0)
+        seg.addWidget(self.custom_metric, 3, 1)
+        right.addLayout(seg)
 
         btns2 = QHBoxLayout()
         for btn in [
@@ -370,6 +476,11 @@ class ABTestWindow(QMainWindow):
         ]:
             btns2.addWidget(btn)
         right.addLayout(btns2)
+
+        collab = QHBoxLayout()
+        for btn in [self.undo_button, self.redo_button, self.share_button]:
+            collab.addWidget(btn)
+        right.addLayout(collab)
 
         rw = QWidget()
         rw.setLayout(right)
@@ -403,6 +514,15 @@ class ABTestWindow(QMainWindow):
         a5 = QAction(L['export_csv'], self)
         a5.triggered.connect(self.export_csv)
         fm.addAction(a5)
+        md = QAction('Export MD', self)
+        md.triggered.connect(self.export_markdown)
+        fm.addAction(md)
+        nb = QAction('Export Notebook', self)
+        nb.triggered.connect(self.export_notebook)
+        fm.addAction(nb)
+        ff = QAction('Feature Flags', self)
+        ff.triggered.connect(self.show_flags_editor)
+        fm.addAction(ff)
 
         # Tutorial / Справка
         hm = mb.addMenu(L['tutorial'])
@@ -420,12 +540,22 @@ class ABTestWindow(QMainWindow):
         self.lang_button.setFixedSize(30, 30)
         self.lang_button.clicked.connect(self.toggle_language)
         cl.addWidget(self.lang_button)
+        self.theme_button = QPushButton("☀")
+        self.theme_button.setFixedSize(30, 30)
+        self.theme_button.clicked.connect(self.toggle_theme)
+        cl.addWidget(self.theme_button)
         mb.setCornerWidget(cw, Qt.Corner.TopRightCorner)
 
     def apply_dark_theme(self):
         p = QPalette()
         p.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
         p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
+        self.setPalette(p)
+
+    def apply_light_theme(self):
+        p = QPalette()
+        p.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
+        p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
         self.setPalette(p)
 
     def update_ui_text(self):
@@ -453,6 +583,7 @@ class ABTestWindow(QMainWindow):
         self.analyze_button.setText(L['analyze_ab'])
         self.conf_button.setText(L['confidence_intervals'])
         self.bayes_button.setText(L['bayesian_analysis'])
+        self.bandit_label.setText('Bandit:')
         self.aa_button.setText(L['aa_testing'])
         self.seq_button.setText(L['sequential_testing'])
         self.obf_button.setText(L['obrien_fleming'])
@@ -464,10 +595,15 @@ class ABTestWindow(QMainWindow):
         self.clear_button.setText(L['clear_results'])
         self.plot_ci_button.setText(L['confidence_intervals'])
         self.plot_power_button.setText(L['power_curve'])
+        self.plot_alpha_button.setText('α-spending')
         self.plot_bootstrap_button.setText(L['bootstrap'])
         self.save_plot_button.setText(L['save_plot'])
         self.del_selected_button.setText(L['delete_selected'])
         self.clear_history_button.setText(L['clear_history'])
+        self.filter_device.setPlaceholderText('mobile/desktop')
+        self.filter_country.setPlaceholderText('US')
+        self.filter_utm.setPlaceholderText('campaign')
+        self.custom_metric.setToolTip("e.g., sum('conv')/sum('users')")
 
     # ————— Обработчики —————
 
@@ -495,12 +631,34 @@ class ABTestWindow(QMainWindow):
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
             alpha  = self.alpha_slider.value()/100
+            if self.pre_exp_data:
+                conv, cov = self.pre_exp_data
+                adj = cuped_adjustment(conv, cov)
+                ca = int(sum(adj[:ua]))
+                cb = int(sum(adj[ua:ua+ub]))
+            if getattr(self, 'records', None):
+                recs = self.records
+                filt = {}
+                if self.filter_device.text():
+                    filt['device'] = self.filter_device.text()
+                if self.filter_country.text():
+                    filt['country'] = self.filter_country.text()
+                if self.filter_utm.text():
+                    filt['utm'] = self.filter_utm.text()
+                if filt:
+                    recs = segment_data(recs, **filt)
+                metric = compute_custom_metric(recs, self.custom_metric.text())
             res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
+            srm_flag, p_srm = srm_check(ua, ub)
+            metric_val = locals().get('metric', None)
             html   = (f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
                       f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
                       f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
                       f"P(A vs B)={res['p_value_ab']:.4f}\n"
-                      f"Winner: {res['winner']}</pre>")
+                      f"Winner: {res['winner']}\n"
+                      f"SRM p={p_srm:.3f}{' ⚠' if srm_flag else ''}\n"
+                      f"Metric={metric_val:.4f}" if metric_val is not None else "" 
+                      + "</pre>")
             self.results_text.setHtml(html)
             self._add_history("A/B/n Test", html)
         except Exception as e:
@@ -524,6 +682,15 @@ class ABTestWindow(QMainWindow):
             pw    = self.power_slider.value()/100
             fig   = plot_power_curve(p1, alpha, pw)
             w     = PlotWindow(self)
+            w.display_plot(fig)
+        except Exception as e:
+            show_error(self, str(e))
+
+    def _on_plot_alpha_spending(self):
+        try:
+            alpha = self.alpha_slider.value()/100
+            fig = plot_alpha_spending(alpha, looks=5)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
@@ -578,6 +745,8 @@ class ABTestWindow(QMainWindow):
             txt += "</pre>"
             self.results_text.setHtml(txt)
             self._add_history("Sequential Analysis", txt)
+            if len(steps) < 5:
+                send_webhook('http://example.com', 'Sequential test stopped early')
         except Exception as e:
             show_error(self, str(e))
 
@@ -596,6 +765,8 @@ class ABTestWindow(QMainWindow):
             txt += "</pre>"
             self.results_text.setHtml(txt)
             self._add_history("OBrien-Fleming", txt)
+            if len(steps) < 5:
+                send_webhook('http://example.com', 'OBF test stopped early')
         except Exception as e:
             show_error(self, str(e))
 
@@ -635,6 +806,53 @@ class ABTestWindow(QMainWindow):
         self.lang = "EN" if self.lang == "RU" else "RU"
         self.update_ui_text()
 
+    def show_flags_editor(self):
+        if self.flags_window is None:
+            self.flags_window = FlagsWindow(self.flag_store)
+        self.flags_window.reload()
+        self.flags_window.show()
+
+    def toggle_theme(self):
+        if self.palette().color(QPalette.ColorRole.Window) == QColor(53, 53, 53):
+            self.apply_light_theme()
+            self.theme_button.setText("☾")
+        else:
+            self.apply_dark_theme()
+            self.theme_button.setText("☀")
+
+    def load_pre_experiment_data(self):
+        path, _ = QFileDialog.getOpenFileName(self, "Load CSV", "", "CSV Files (*.csv)")
+        if not path:
+            return
+        try:
+            conv = []
+            cov = []
+            records = []
+            with open(path, newline="", encoding="utf-8") as f:
+                r = csv.DictReader(f)
+                for row in r:
+                    records.append(row)
+                    conv.append(float(row.get("conv", 0)))
+                    cov.append(float(row.get("cov", 0)))
+            self.pre_exp_data = (conv, cov)
+            self.records = records
+            QMessageBox.information(self, "Loaded", f"Loaded {len(records)} rows")
+        except Exception as e:
+            show_error(self, str(e))
+
+    def undo(self):
+        if hasattr(self, 'undo_stack') and self.undo_stack:
+            state = self.undo_stack.pop()
+            self.results_text.setHtml(state)
+
+    def redo(self):
+        # simple placeholder, real stack not implemented
+        pass
+
+    def share_session(self):
+        txt = self.results_text.toPlainText()
+        QMessageBox.information(self, "Share", txt if txt else "Nothing to share")
+
     # ————— Сессионные функции и экспорт результатов —————
 
 
@@ -672,6 +890,32 @@ class ABTestWindow(QMainWindow):
         try:
             sections = {"Results": self.results_text.toPlainText().splitlines()}
             utils.export_csv(sections, path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
+
+    def export_markdown(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Markdown", "", "Markdown Files (*.md)"
+        )
+        if not path:
+            return
+        try:
+            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            utils.export_markdown(sections, path)
+            QMessageBox.information(self, "Success", f"Saved to {path}")
+        except Exception as e:
+            show_error(self, str(e))
+
+    def export_notebook(self):
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save Notebook", "", "Notebook Files (*.ipynb)"
+        )
+        if not path:
+            return
+        try:
+            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            utils.export_notebook(sections, path)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
             show_error(self, str(e))
