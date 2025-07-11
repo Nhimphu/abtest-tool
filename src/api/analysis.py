@@ -2,11 +2,14 @@
 
 import os
 from flask import Flask, jsonify, request
+from flask_swagger_ui import get_swaggerui_blueprint
 from stats.ab_test import evaluate_abn_test
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    swaggerui_blueprint = get_swaggerui_blueprint("/docs", "/spec", config={"app_name": "Analysis API"})
+    app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
 
     @app.route('/abtest', methods=['POST'])
     def run_abtest():

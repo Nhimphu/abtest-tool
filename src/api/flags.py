@@ -1,9 +1,12 @@
 from flask import Flask, jsonify, request
+from flask_swagger_ui import get_swaggerui_blueprint
 from flags import FeatureFlagStore
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
+    swaggerui_blueprint = get_swaggerui_blueprint("/docs", "/spec", config={"app_name": "Flags API"})
+    app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
     store = FeatureFlagStore()
 
     @app.route('/flags', methods=['GET'])
