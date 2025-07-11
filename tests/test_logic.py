@@ -160,6 +160,14 @@ def test_run_obrien_fleming_steps():
     assert isinstance(steps, list) and steps
     assert 'threshold' in steps[0]
 
+
+def test_sequential_webhook_called(monkeypatch):
+    import logic
+    called = {}
+    monkeypatch.setattr(logic, 'send_webhook', lambda url, msg: called.setdefault('url', url))
+    logic.run_sequential_analysis(100, 10, 100, 50, 0.05, looks=2, webhook_url='http://example.com')
+    assert called.get('url') == 'http://example.com'
+
 def test_cuped_no_change_with_zero_covariate():
     x = [1, 2, 3]
     adjusted = cuped_adjustment(x, [0, 0, 0])

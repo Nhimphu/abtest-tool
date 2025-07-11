@@ -726,7 +726,12 @@ class ABTestWindow(QMainWindow):
         if not path:
             return
         try:
-            sections = {"Results": self.results_text.toPlainText().splitlines()}
+            sections = {
+                "Описание": [],
+                "Результаты": self.results_text.toPlainText().splitlines(),
+                "Визуализации": [],
+                "Интерпретация": [],
+            }
             utils.export_notebook(sections, path)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
