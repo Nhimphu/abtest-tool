@@ -18,7 +18,15 @@ pytest -q
 OpenAPI спецификация доступна на `/spec`, интерактивная документация
 Swagger‑UI отображается по адресу `/docs`.
 
--## Additional Features
+## Plugins
+
+Дополнительные тяжёлые функции вынесены в папку `plugins/`. Основное
+приложение загружается без них, но при наличии директории `plugins`
+модули подключаются автоматически с помощью `plugin_loader`. Так можно
+подключить экспорт PDF/Excel, DWH‑коннекторы и расширенный Байесовский
+анализ, не устанавливая лишние зависимости в базовой сборке.
+
+## Additional Features
 
 - CUPED adjustment and SRM check helpers (SRM warnings shown before analysis)
 - Simple alpha-spending curve generation

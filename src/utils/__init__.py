@@ -6,6 +6,7 @@ from typing import Any, Dict, Iterable, List
 from .template import NB_TEMPLATE
 
 from .safe_eval import safe_eval
+import plugin_loader
 
 """Utility helpers for exporting results and simple data processing."""
 
@@ -81,3 +82,10 @@ def segment_data(records: List[Dict[str, Any]], **filters: Any) -> List[Dict[str
 def compute_custom_metric(records: List[Dict[str, Any]], expression: str) -> float:
     """Safely evaluate simple metric expressions on ``records``."""
     return safe_eval(expression, records)
+
+
+# Replace export helpers with plugin implementations if available
+_plug = plugin_loader.get_plugin("export")
+if _plug:
+    export_pdf = getattr(_plug, "export_pdf", export_pdf)  # type: ignore
+    export_excel = getattr(_plug, "export_excel", export_excel)  # type: ignore

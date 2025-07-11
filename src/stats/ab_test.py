@@ -3,6 +3,7 @@ import types
 from typing import List, Optional
 
 from metrics import track_time
+import plugin_loader
 
 try:
     import numpy as np
@@ -140,19 +141,15 @@ def _evaluate_abn_test(
     }
 
 
+_bayes_plug = plugin_loader.get_plugin("bayesian")
+
+
 @track_time
 def bayesian_analysis(alpha_prior: float, beta_prior: float, users_a: int, conv_a: int, users_b: int, conv_b: int):
-    """Bayesian A/B analysis for Bernoulli outcomes."""
-    a1 = alpha_prior + conv_a
-    b1 = beta_prior + (users_a - conv_a)
-    a2 = alpha_prior + conv_b
-    b2 = beta_prior + (users_b - conv_b)
-    x = np.linspace(0, 1, 500)
-    pdf_a = beta.pdf(x, a1, b1)
-    pdf_b = beta.pdf(x, a2, b2)
-    cdf_a = beta.cdf(x, a1, b1)
-    prob = np.trapz(pdf_b * cdf_a, x)
-    return prob, x, pdf_a, pdf_b
+    """Bayesian A/B analysis delegated to plugin if available."""
+    if _bayes_plug and hasattr(_bayes_plug, "bayesian_analysis"):
+        return _bayes_plug.bayesian_analysis(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b)
+    raise ImportError("Bayesian analysis plugin not available")
 
 
 @track_time
