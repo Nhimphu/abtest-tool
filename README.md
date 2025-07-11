@@ -33,5 +33,5 @@ pytest -q
 - Export to Markdown and Notebook, plus PDF template
 - Basic collaboration tools (undo/redo/share)
 - JSON-based translations with auto language detection
-- CI pipeline runs tests with coverage and pre-commit (black, flake8, bandit)
+- CI pipeline runs tests with coverage and pre-commit (black, flake8, isort, mypy, bandit)
 
