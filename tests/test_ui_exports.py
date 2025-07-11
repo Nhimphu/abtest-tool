@@ -196,7 +196,11 @@ def test_export_notebook_invokes_util(monkeypatch):
 
 def test_analyze_abn_triggers_srm(monkeypatch):
     warned = {}
-    monkeypatch.setattr(ui_mainwindow.QMessageBox, 'warning', lambda *a, **k: warned.setdefault('called', True))
+    def warn(*a, **k):
+        warned.setdefault('called', True)
+        return 1  # Ignore button
+
+    monkeypatch.setattr(ui_mainwindow.QMessageBox, 'warning', warn)
     monkeypatch.setattr(ui_mainwindow, 'srm_check', lambda *a, **k: (True, 0.01))
 
     dummy = types.SimpleNamespace(
@@ -211,7 +215,7 @@ def test_analyze_abn_triggers_srm(monkeypatch):
         _add_history=lambda *a, **k: None,
     )
 
-    ABTestWindow._on_analyze_abn(dummy)
+    ABTestWindow._on_analyze(dummy)
     assert warned.get('called')
 
 

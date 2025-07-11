@@ -39,6 +39,7 @@ from stats.ab_test import (
     run_obrien_fleming,
     calculate_roi,
     srm_check,
+    cuped_adjustment,
 )
 from plots import (
     plot_bayesian_posterior,
@@ -379,7 +380,7 @@ class ABTestWindow(QMainWindow):
 
         # Кнопки анализа
         self.analyze_button = QPushButton()
-        self.analyze_button.clicked.connect(self._on_analyze_abn)
+        self.analyze_button.clicked.connect(self._on_analyze)
         self.analyze_button.setToolTip("Run A/B/n test")
         self.conf_button = QPushButton()
         self.conf_button.clicked.connect(self._on_plot_confidence_intervals)
@@ -691,29 +692,56 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
-    def _on_analyze_abn(self):
+    def _on_analyze(self):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
-            alpha  = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
+
             flag, p = srm_check(ua, ub, alpha=alpha)
             if flag:
-                QMessageBox.warning(
+                SB = getattr(
+                    QMessageBox,
+                    "StandardButton",
+                    type("SB", (), {"Ignore": 1, "Cancel": 2}),
+                )
+                btn = QMessageBox.warning(
                     self,
                     "SRM detected",
                     f"SRM check failed (p={p:.3f}). Results may be biased.",
+                    getattr(SB, "Ignore", 1) | getattr(SB, "Cancel", 2),
                 )
-            res    = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
-            html   = (f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
-                      f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
-                      f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
-                      f"P(A vs B)={res['p_value_ab']:.4f}\n"
-                      f"Winner: {res['winner']}</pre>")
+                if btn != getattr(SB, "Ignore", btn):
+                    return
+
+            if hasattr(self, "metric_a") and hasattr(self, "covariate_a"):
+                adj = cuped_adjustment(self.metric_a, self.covariate_a)
+                ca = int(round(sum(adj)))
+                ua = len(adj)
+            if hasattr(self, "metric_b") and hasattr(self, "covariate_b"):
+                adj = cuped_adjustment(self.metric_b, self.covariate_b)
+                cb = int(round(sum(adj)))
+                ub = len(adj)
+            if hasattr(self, "metric_c") and hasattr(self, "covariate_c"):
+                adj = cuped_adjustment(self.metric_c, self.covariate_c)
+                cc = int(round(sum(adj)))
+                uc = len(adj)
+
+            res = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
+            html = (
+                f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
+                f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
+                f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
+                f"P(A vs B)={res['p_value_ab']:.4f}\n"
+                f"Winner: {res['winner']}</pre>"
+            )
             self.results_text.setHtml(html)
             self._add_history("A/B/n Test", html)
         except Exception as e:
             show_error(self, str(e))
+
+    _on_analyze_abn = _on_analyze
 
     def _on_plot_confidence_intervals(self):
         try:
