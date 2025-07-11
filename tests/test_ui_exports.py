@@ -90,7 +90,8 @@ widget_names = [
     'QApplication','QMainWindow','QWidget','QVBoxLayout','QHBoxLayout',
     'QGridLayout','QLabel','QLineEdit','QPushButton','QSlider',
     'QDoubleSpinBox','QTabWidget','QTableWidget','QTableWidgetItem',
-    'QTextBrowser','QWizard','QWizardPage','QComboBox','QProgressBar'
+    'QTextBrowser','QWizard','QWizardPage','QComboBox','QProgressBar',
+    'QGroupBox'
 ]
 for name in widget_names:
     if not hasattr(widgets_mod, name):
