@@ -1,7 +1,10 @@
 import math
 import numpy as np
 import plotly.graph_objects as go
-from scipy.stats import norm
+
+# ``scipy`` is an optional dependency. ``stats.ab_test`` provides a
+# compatible ``norm`` object with fallbacks when SciPy is unavailable.
+from stats.ab_test import norm
 
 from stats.ab_test import required_sample_size, bayesian_analysis, pocock_alpha_curve
 
