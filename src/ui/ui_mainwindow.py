@@ -40,13 +40,24 @@ from PyQt6.QtGui import (
     QAction,
 )
 try:
-    from PyQt6.QtCore import Qt, QDateTime, QEvent
+    from PyQt6.QtGui import QIcon
+except Exception:  # pragma: no cover - optional
+    class QIcon:
+        def __init__(self, *a, **k):
+            pass
+try:
+    from PyQt6.QtCore import Qt, QDateTime, QEvent, QDir
 except Exception:  # pragma: no cover - optional
     from PyQt6.QtCore import Qt, QDateTime  # type: ignore
     class QEvent:
         class Type:
             FocusIn = 0
             FocusOut = 1
+
+    class QDir:
+        @staticmethod
+        def addSearchPath(*a, **k):
+            pass
 
 from .widgets import with_help_label
 
@@ -90,6 +101,10 @@ from plots import (
 )
 from i18n import i18n, detect_language
 import utils
+from pathlib import Path
+
+# Register path prefix for icons used via the Qt resource scheme
+QDir.addSearchPath("resources", str(Path(__file__).resolve().parent / "resources"))
 
 
 def show_error(parent, msg):
@@ -614,6 +629,7 @@ class ABTestWindow(QMainWindow):
 
         # Кнопки анализа
         self.analyze_button = QPushButton()
+        self.analyze_button.setIcon(QIcon(":/resources/run.svg"))
         self.analyze_button.clicked.connect(self._on_analyze)
         self.analyze_button.setToolTip(self.i18n[self.lang]["tooltip.analyze"])
         self.analyze_button.setStatusTip(self.i18n[self.lang]["help.analyze"])
@@ -694,6 +710,7 @@ class ABTestWindow(QMainWindow):
             self.i18n[self.lang]["help.plot_bootstrap"]
         )
         self.save_plot_button = QPushButton()
+        self.save_plot_button.setIcon(QIcon(":/resources/export.svg"))
         self.save_plot_button.clicked.connect(self._save_current_plot)
         self.save_plot_button.setToolTip(self.i18n[self.lang]["tooltip.save_plot"])
         self.save_plot_button.setStatusTip(self.i18n[self.lang]["help.save_plot"])
@@ -721,6 +738,7 @@ class ABTestWindow(QMainWindow):
             self.i18n[self.lang]["help.load_pre_exp"]
         )
         self.clear_button = QPushButton()
+        self.clear_button.setIcon(QIcon(":/resources/undo.svg"))
         self.clear_button.clicked.connect(
             lambda: self.results_text.setHtml("<pre></pre>")
         )
