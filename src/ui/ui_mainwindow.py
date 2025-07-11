@@ -657,6 +657,7 @@ class ABTestWindow(QMainWindow):
 
         # Результаты
         self.results_text = QTextBrowser()
+        self.results_text.setStyleSheet("font-size:14pt; font-family:Arial;")
 
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
