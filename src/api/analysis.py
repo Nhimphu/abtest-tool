@@ -11,7 +11,12 @@ from flask_jwt_extended import (
 )
 from flask_swagger_ui import get_swaggerui_blueprint
 from stats.ab_test import evaluate_abn_test
-from metrics import REQUEST_COUNTER, generate_latest, CONTENT_TYPE_LATEST
+from metrics import (
+    REQUEST_COUNTER,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+    track_time,
+)
 
 
 def create_app() -> Flask:
@@ -39,6 +44,7 @@ def create_app() -> Flask:
         return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     @app.post("/login")
+    @track_time
     def login():
         data = request.get_json(force=True)
         if data.get("username") == "admin" and data.get("password") == "admin":
@@ -49,6 +55,7 @@ def create_app() -> Flask:
 
     @app.post("/refresh")
     @jwt_required(refresh=True)
+    @track_time
     def refresh():
         identity = get_jwt_identity()
         token = create_access_token(identity=identity)
@@ -56,6 +63,7 @@ def create_app() -> Flask:
 
     @app.route("/abtest", methods=["POST"])
     @jwt_required()
+    @track_time
     def run_abtest():
         data = request.get_json(force=True)
         res = evaluate_abn_test(
