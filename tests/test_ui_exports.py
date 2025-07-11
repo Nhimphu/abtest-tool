@@ -112,6 +112,9 @@ class QMessageBox:
     @staticmethod
     def critical(*args, **kwargs):
         pass
+    @staticmethod
+    def warning(*args, **kwargs):
+        pass
 widgets_mod.QMessageBox = QMessageBox
 
 pyqt6_mod.QtWidgets = widgets_mod
@@ -132,6 +135,7 @@ sys.modules['PyQt6.QtWidgets'] = widgets_mod
 sys.modules['PyQt6.QtGui'] = gui_mod
 sys.modules['PyQt6.QtCore'] = core_mod
 
+import ui_mainwindow
 from ui_mainwindow import ABTestWindow, QFileDialog, utils
 
 
@@ -183,5 +187,26 @@ def test_export_notebook_invokes_util(monkeypatch):
         'Интерпретация': [],
     }
     assert recorded.get('args') == (expected, 'out.ipynb')
+
+
+def test_analyze_abn_triggers_srm(monkeypatch):
+    warned = {}
+    monkeypatch.setattr(ui_mainwindow.QMessageBox, 'warning', lambda *a, **k: warned.setdefault('called', True))
+    monkeypatch.setattr(ui_mainwindow, 'srm_check', lambda *a, **k: (True, 0.01))
+
+    dummy = types.SimpleNamespace(
+        users_A_var=types.SimpleNamespace(text=lambda: '1000'),
+        conv_A_var=types.SimpleNamespace(text=lambda: '100'),
+        users_B_var=types.SimpleNamespace(text=lambda: '1000'),
+        conv_B_var=types.SimpleNamespace(text=lambda: '110'),
+        users_C_var=types.SimpleNamespace(text=lambda: '0'),
+        conv_C_var=types.SimpleNamespace(text=lambda: '0'),
+        alpha_slider=types.SimpleNamespace(value=lambda: 5),
+        results_text=types.SimpleNamespace(setHtml=lambda x: None),
+        _add_history=lambda *a, **k: None,
+    )
+
+    ABTestWindow._on_analyze_abn(dummy)
+    assert warned.get('called')
 
 

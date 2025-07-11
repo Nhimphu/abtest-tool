@@ -404,7 +404,12 @@ def plot_alpha_spending(alpha, looks):
         go.Scatter(x=list(range(1, looks + 1)), y=obf, mode="lines+markers", name="O'Brien-Fleming")
     )
     fig.update_layout(
-        title="Alpha Spending", xaxis_title="Look", yaxis_title="Alpha", margin=dict(l=40, r=20, t=50, b=40)
+        title="Alpha Spending",
+        xaxis_title="Look",
+        yaxis_title="Alpha",
+        hovermode="x unified",
+        xaxis=dict(rangeslider=dict(visible=True)),
+        margin=dict(l=40, r=20, t=50, b=40),
     )
     return fig
 
