@@ -406,6 +406,10 @@ class ABTestWindow(QMainWindow):
         self.lang = detect_language()
         self.i18n = i18n
 
+        # Начальные настройки темы
+        self.is_dark = True
+        self.apply_dark_theme()
+
         self.setWindowTitle(self.i18n[self.lang]["title"])
         self.setGeometry(100, 100, 1000, 800)
 
@@ -417,8 +421,6 @@ class ABTestWindow(QMainWindow):
         self._build_ui()
         # Устанавливаем фильтры событий
         self._install_event_filters()
-        # Применяем тёмную тему
-        self.apply_dark_theme()
         # Загружаем историю
         self._load_history()
         # Обновляем тексты
@@ -724,7 +726,6 @@ class ABTestWindow(QMainWindow):
 
         # Результаты
         self.results_text = QTextBrowser()
-        self.results_text.setStyleSheet("font-size:14pt; font-family:Arial;")
 
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
@@ -994,32 +995,49 @@ class ABTestWindow(QMainWindow):
 
     def apply_dark_theme(self):
         p = QPalette()
+        # Основной фон
         p.setColor(QPalette.ColorRole.Window, QColor(53, 53, 53))
+        p.setColor(QPalette.ColorRole.Base, QColor(35, 35, 35))
+        p.setColor(QPalette.ColorRole.AlternateBase, QColor(53, 53, 53))
+        # Текст
         p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.white)
-        self.setPalette(p)
-        if hasattr(self, "results_text"):
-            base_style = "font-size:14pt; font-family:Arial;"
-            self.results_text.setStyleSheet(
-                base_style + " background-color: rgb(53,53,53); color: white;"
-            )
+        p.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.white)
+        # Кнопки
+        p.setColor(QPalette.ColorRole.Button, QColor(53, 53, 53))
+        p.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.white)
+        # Выделение
+        p.setColor(QPalette.ColorRole.Highlight, QColor(42, 130, 218))
+        p.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
+        # Всплывающие подсказки
+        p.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.white)
+        p.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.white)
+        # Применение
+        QApplication.setPalette(p)
+        # Сброс custom stylesheet, если есть
+        self.setStyleSheet("")
 
     def apply_light_theme(self):
         p = QPalette()
+        # Основной фон
         p.setColor(QPalette.ColorRole.Window, Qt.GlobalColor.white)
-        p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
         p.setColor(QPalette.ColorRole.Base, Qt.GlobalColor.white)
         p.setColor(QPalette.ColorRole.AlternateBase, Qt.GlobalColor.lightGray)
+        # Текст
+        p.setColor(QPalette.ColorRole.WindowText, Qt.GlobalColor.black)
         p.setColor(QPalette.ColorRole.Text, Qt.GlobalColor.black)
+        # Кнопки
         p.setColor(QPalette.ColorRole.Button, Qt.GlobalColor.white)
         p.setColor(QPalette.ColorRole.ButtonText, Qt.GlobalColor.black)
-        self.setPalette(p)
+        # Выделение
+        p.setColor(QPalette.ColorRole.Highlight, QColor(30, 144, 255))
+        p.setColor(QPalette.ColorRole.HighlightedText, Qt.GlobalColor.white)
+        # Всплывающие подсказки
+        p.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.black)
+        p.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.black)
+        # Применение
         QApplication.setPalette(p)
-        # Ensure results widget uses light colors
-        if hasattr(self, "results_text"):
-            base_style = "font-size:14pt; font-family:Arial;"
-            self.results_text.setStyleSheet(
-                base_style + " background-color: white; color: black;"
-            )
+        # Сброс custom stylesheet, если есть
+        self.setStyleSheet("")
 
     def update_ui_text(self):
         L = self.i18n[self.lang]
@@ -1334,12 +1352,14 @@ class ABTestWindow(QMainWindow):
         self.update_ui_text()
 
     def toggle_theme(self):
-        if self.palette().color(QPalette.ColorRole.Window) == QColor(53, 53, 53):
+        if getattr(self, "is_dark", True):
             self.apply_light_theme()
             self.theme_button.setText("☾")
+            self.is_dark = False
         else:
             self.apply_dark_theme()
             self.theme_button.setText("☀")
+            self.is_dark = True
 
     def _on_add_data_source(self):
         dlg = AddDataSourceDialog(self)
