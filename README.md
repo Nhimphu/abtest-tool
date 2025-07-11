@@ -8,7 +8,7 @@ cd abtest-tool
 python -m venv venv
 venv\Scripts\Activate
 pip install -r requirements.txt
-python src/main.py
+python src/ui/main.py
 
 # Тест
 pytest -q
