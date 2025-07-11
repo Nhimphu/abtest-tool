@@ -2,27 +2,48 @@
 
 import os
 from flask import Flask, jsonify, request
+from flask_jwt_extended import (
+    JWTManager,
+    create_access_token,
+    jwt_required,
+)
 from flask_swagger_ui import get_swaggerui_blueprint
 from stats.ab_test import evaluate_abn_test
 
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    swaggerui_blueprint = get_swaggerui_blueprint("/docs", "/spec", config={"app_name": "Analysis API"})
+    app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "secret")
+    jwt = JWTManager(app)
+
+    swaggerui_blueprint = get_swaggerui_blueprint(
+        "/docs", "/spec", config={"app_name": "Analysis API"}
+    )
     app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
 
-    @app.route('/abtest', methods=['POST'])
+    @app.post("/login")
+    def login():
+        data = request.get_json(force=True)
+        if data.get("username") == "admin" and data.get("password") == "admin":
+            token = create_access_token(identity="admin")
+            return jsonify(access_token=token)
+        return jsonify({"msg": "Bad credentials"}), 401
+
+    @app.route("/abtest", methods=["POST"])
+    @jwt_required()
     def run_abtest():
         data = request.get_json(force=True)
         res = evaluate_abn_test(
-            data['users_a'], data['conv_a'],
-            data['users_b'], data['conv_b'],
-            metrics=data.get('metrics', 1),
-            alpha=data.get('alpha', 0.05),
+            data["users_a"],
+            data["conv_a"],
+            data["users_b"],
+            data["conv_b"],
+            metrics=data.get("metrics", 1),
+            alpha=data.get("alpha", 0.05),
         )
         return jsonify(res)
 
-    @app.route('/spec', methods=['GET'])
+    @app.route("/spec", methods=["GET"])
     def spec():
         """Return minimal OpenAPI spec."""
         spec = {
@@ -30,9 +51,7 @@ def create_app() -> Flask:
             "info": {"title": "Analysis API", "version": "1.0"},
             "paths": {
                 "/abtest": {
-                    "post": {
-                        "responses": {"200": {"description": "AB test result"}}
-                    }
+                    "post": {"responses": {"200": {"description": "AB test result"}}}
                 }
             },
         }
@@ -47,6 +66,5 @@ def main():
     app.run(port=port)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
-

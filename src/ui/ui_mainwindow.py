@@ -4,6 +4,8 @@ import sys
 import sqlite3
 import csv
 from typing import Dict
+import json
+import urllib.request
 
 from PyQt6.QtWidgets import (
     QApplication,
@@ -26,8 +28,16 @@ from PyQt6.QtWidgets import (
     QTextBrowser,
     QComboBox,
 )
-from PyQt6.QtGui import QPalette, QColor, QIntValidator, QDoubleValidator, QAction
+from PyQt6.QtGui import (
+    QPalette,
+    QColor,
+    QIntValidator,
+    QDoubleValidator,
+    QAction,
+)
 from PyQt6.QtCore import Qt, QDateTime
+
+from .login import LoginDialog
 
 try:  # Optional dependency
     from PyQt6.QtWebEngineWidgets import QWebEngineView  # type: ignore
@@ -103,10 +113,24 @@ class AddDataSourceDialog:
 
     def __init__(self, parent=None):
         from PyQt6 import QtWidgets
-        QDialog = getattr(QtWidgets, "QDialog", type("QDialog", (), {"exec": lambda self: 0, "accept": lambda self: None, "reject": lambda self: None}))
+
+        QDialog = getattr(
+            QtWidgets,
+            "QDialog",
+            type(
+                "QDialog",
+                (),
+                {
+                    "exec": lambda self: 0,
+                    "accept": lambda self: None,
+                    "reject": lambda self: None,
+                },
+            ),
+        )
         if hasattr(QtWidgets, "QDialogButtonBox"):
             QDialogButtonBox = QtWidgets.QDialogButtonBox
         else:  # pragma: no cover - used in tests without PyQt installed
+
             class DummySig:
                 def connect(self, *a, **k):
                     pass
@@ -119,16 +143,51 @@ class AddDataSourceDialog:
                 def __init__(self, *a, **k):
                     self.accepted = DummySig()
                     self.rejected = DummySig()
-        
+
         def _layout_stub():
-            return type("Layout", (), {"setContentsMargins": lambda *a, **k: None, "addWidget": lambda *a, **k: None})()
+            return type(
+                "Layout",
+                (),
+                {
+                    "setContentsMargins": lambda *a, **k: None,
+                    "addWidget": lambda *a, **k: None,
+                },
+            )()
 
         QVBoxLayout = getattr(QtWidgets, "QVBoxLayout", _layout_stub)
         QHBoxLayout = getattr(QtWidgets, "QHBoxLayout", _layout_stub)
-        QLabel = getattr(QtWidgets, "QLabel", lambda *a, **k: type("QLabel", (), {"setText": lambda *a, **k: None})())
-        QLineEdit = getattr(QtWidgets, "QLineEdit", lambda *a, **k: type("QLineEdit", (), {"text": lambda self: "", "setText": lambda *a, **k: None})())
-        QComboBox = getattr(QtWidgets, "QComboBox", lambda *a, **k: type("QComboBox", (), {"addItems": lambda *a, **k: None, "currentText": lambda self: ""})())
-        QWidget = getattr(QtWidgets, "QWidget", lambda *a, **k: type("QWidget", (), {"setLayout": lambda *a, **k: None, "setVisible": lambda *a, **k: None})())
+        QLabel = getattr(
+            QtWidgets,
+            "QLabel",
+            lambda *a, **k: type("QLabel", (), {"setText": lambda *a, **k: None})(),
+        )
+        QLineEdit = getattr(
+            QtWidgets,
+            "QLineEdit",
+            lambda *a, **k: type(
+                "QLineEdit",
+                (),
+                {"text": lambda self: "", "setText": lambda *a, **k: None},
+            )(),
+        )
+        QComboBox = getattr(
+            QtWidgets,
+            "QComboBox",
+            lambda *a, **k: type(
+                "QComboBox",
+                (),
+                {"addItems": lambda *a, **k: None, "currentText": lambda self: ""},
+            )(),
+        )
+        QWidget = getattr(
+            QtWidgets,
+            "QWidget",
+            lambda *a, **k: type(
+                "QWidget",
+                (),
+                {"setLayout": lambda *a, **k: None, "setVisible": lambda *a, **k: None},
+            )(),
+        )
 
         self._dialog = QDialog(parent)
         layout = QVBoxLayout(self._dialog)
@@ -139,7 +198,15 @@ class AddDataSourceDialog:
         layout.addWidget(self.type_combo)
 
         self.rows = {}
-        for name in ["Project", "Credentials", "Host", "Port", "Database", "User", "Password"]:
+        for name in [
+            "Project",
+            "Credentials",
+            "Host",
+            "Port",
+            "Database",
+            "User",
+            "Password",
+        ]:
             row = QWidget()
             hl = QHBoxLayout(row)
             hl.setContentsMargins(0, 0, 0, 0)
@@ -159,7 +226,9 @@ class AddDataSourceDialog:
         self.bq_project = self.rows["project"][1]
         self.bq_creds = self.rows["credentials"][1]
 
-        self.buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+        self.buttons = QDialogButtonBox(
+            QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+        )
         layout.addWidget(self.buttons)
         self.buttons.accepted.connect(self._dialog.accept)
         self.buttons.rejected.connect(self._dialog.reject)
@@ -200,7 +269,7 @@ class ABTestWindow(QMainWindow):
         self.lang = detect_language()
         self.i18n = i18n
 
-        self.setWindowTitle(self.i18n[self.lang]['title'])
+        self.setWindowTitle(self.i18n[self.lang]["title"])
         self.setGeometry(100, 100, 1000, 800)
 
         # Инициализируем историю
@@ -216,25 +285,31 @@ class ABTestWindow(QMainWindow):
         # Обновляем тексты
         self.update_ui_text()
         self.sources = []
+        self.token = None
+        self._setup_auth()
 
     # ————— История (SQLite) —————
 
     def _init_history_db(self):
-        self.conn = sqlite3.connect('history.db')
+        self.conn = sqlite3.connect("history.db")
         c = self.conn.cursor()
-        c.execute('''
+        c.execute(
+            """
             CREATE TABLE IF NOT EXISTS history (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 timestamp TEXT,
                 test TEXT,
                 result TEXT
-            )''')
-        c.execute('''
+            )"""
+        )
+        c.execute(
+            """
             CREATE TABLE IF NOT EXISTS session_states (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 payload TEXT,
                 timestamp TEXT
-            )''')
+            )"""
+        )
         self.conn.commit()
 
     def _load_history(self):
@@ -260,7 +335,7 @@ class ABTestWindow(QMainWindow):
         c = self.conn.cursor()
         c.execute(
             "INSERT INTO history(timestamp,test,result) VALUES(?,?,?)",
-            (ts, name, content.replace("<pre>", "").replace("</pre>", ""))
+            (ts, name, content.replace("<pre>", "").replace("</pre>", "")),
         )
         self.conn.commit()
         rec_id = c.lastrowid
@@ -272,7 +347,9 @@ class ABTestWindow(QMainWindow):
         self.history_table.setItem(r, 0, chk)
         self.history_table.setItem(r, 1, QTableWidgetItem(ts))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
-        self.history_table.setItem(r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", "")))
+        self.history_table.setItem(
+            r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", ""))
+        )
         pb = self._build_inline_chart(content)
         self.history_table.setCellWidget(r, 4, pb)
 
@@ -309,16 +386,18 @@ class ABTestWindow(QMainWindow):
         return pb
 
     def _export_history_csv(self):
-        path, _ = QFileDialog.getSaveFileName(self, "Save History CSV", "", "CSV Files (*.csv)")
+        path, _ = QFileDialog.getSaveFileName(
+            self, "Save History CSV", "", "CSV Files (*.csv)"
+        )
         if not path:
             return
         c = self.conn.cursor()
         c.execute("SELECT timestamp,test,result FROM history ORDER BY id")
         rows = c.fetchall()
         try:
-            with open(path, 'w', newline='', encoding='utf-8') as f:
+            with open(path, "w", newline="", encoding="utf-8") as f:
                 w = csv.writer(f)
-                w.writerow(['Timestamp', 'Test', 'Result'])
+                w.writerow(["Timestamp", "Test", "Result"])
                 w.writerows(rows)
             QMessageBox.information(self, "Success", f"Saved to {path}")
         except Exception as e:
@@ -447,35 +526,35 @@ class ABTestWindow(QMainWindow):
 
         # ROI
         self.revenue_per_user_label = QLabel()
-        self.revenue_per_user_var   = QLineEdit("50")
+        self.revenue_per_user_var = QLineEdit("50")
         self.revenue_per_user_var.setValidator(QDoubleValidator(0, 1e9, 2))
         self.revenue_per_user_var.setToolTip("Revenue per user")
-        self.traffic_cost_label     = QLabel()
-        self.traffic_cost_var       = QLineEdit("10")
+        self.traffic_cost_label = QLabel()
+        self.traffic_cost_var = QLineEdit("10")
         self.traffic_cost_var.setValidator(QDoubleValidator(0, 1e9, 2))
         self.traffic_cost_var.setToolTip("Traffic cost per user")
-        self.budget_label           = QLabel()
-        self.budget_var             = QLineEdit("10000")
+        self.budget_label = QLabel()
+        self.budget_var = QLineEdit("10000")
         self.budget_var.setValidator(QDoubleValidator(0, 1e12, 2))
         self.budget_var.setToolTip("Available budget")
-        self.roi_button             = QPushButton()
+        self.roi_button = QPushButton()
         self.roi_button.clicked.connect(self._on_calculate_roi)
         self.roi_button.setToolTip("Calculate ROI")
 
         # Графики
-        self.plot_ci_button       = QPushButton()
+        self.plot_ci_button = QPushButton()
         self.plot_ci_button.clicked.connect(self._on_plot_confidence_intervals)
         self.plot_ci_button.setToolTip("Confidence intervals plot")
-        self.plot_power_button    = QPushButton()
+        self.plot_power_button = QPushButton()
         self.plot_power_button.clicked.connect(self._on_plot_power_curve)
         self.plot_power_button.setToolTip("Required sample size curve")
-        self.plot_alpha_button    = QPushButton()
+        self.plot_alpha_button = QPushButton()
         self.plot_alpha_button.clicked.connect(self._on_plot_alpha_spending)
         self.plot_alpha_button.setToolTip("Alpha spending plot")
         self.plot_bootstrap_button = QPushButton()
         self.plot_bootstrap_button.clicked.connect(self._on_plot_bootstrap_distribution)
         self.plot_bootstrap_button.setToolTip("Bootstrap distribution")
-        self.save_plot_button     = QPushButton()
+        self.save_plot_button = QPushButton()
         self.save_plot_button.clicked.connect(self._save_current_plot)
         self.save_plot_button.setToolTip("Save last plot")
 
@@ -491,15 +570,21 @@ class ABTestWindow(QMainWindow):
 
         # Загрузка / Очистка
         self.load_pre_exp_button = QPushButton()
-        self.load_pre_exp_button.clicked.connect(lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented"))
+        self.load_pre_exp_button.clicked.connect(
+            lambda: QMessageBox.information(self, "Info", "Pre-exp not implemented")
+        )
         self.load_pre_exp_button.setToolTip("Load pre-experiment data")
-        self.clear_button        = QPushButton()
-        self.clear_button.clicked.connect(lambda: self.results_text.setHtml("<pre></pre>"))
+        self.clear_button = QPushButton()
+        self.clear_button.clicked.connect(
+            lambda: self.results_text.setHtml("<pre></pre>")
+        )
         self.clear_button.setToolTip("Clear results")
 
         # История
-        self.history_table      = QTableWidget(0, 5)
-        self.history_table.setHorizontalHeaderLabels(["✓", "Дата", "Тест", "Результат", "⇵"])
+        self.history_table = QTableWidget(0, 5)
+        self.history_table.setHorizontalHeaderLabels(
+            ["✓", "Дата", "Тест", "Результат", "⇵"]
+        )
         self.history_table.setSortingEnabled(True)
         self.history_filter = QLineEdit()
         self.history_filter.setPlaceholderText("Filter history")
@@ -581,7 +666,7 @@ class ABTestWindow(QMainWindow):
             self.plot_power_button,
             self.plot_alpha_button,
             self.plot_bootstrap_button,
-            self.save_plot_button
+            self.save_plot_button,
         ]:
             btns.addWidget(btn)
         right.addLayout(btns)
@@ -590,10 +675,7 @@ class ABTestWindow(QMainWindow):
         right.addWidget(self.results_text)
 
         btns2 = QHBoxLayout()
-        for btn in [
-            self.load_pre_exp_button,
-            self.clear_button
-        ]:
+        for btn in [self.load_pre_exp_button, self.clear_button]:
             btns2.addWidget(btn)
         right.addLayout(btns2)
 
@@ -619,30 +701,29 @@ class ABTestWindow(QMainWindow):
         L = self.i18n[self.lang]
         mb = self.menuBar()
         # File / Файл
-        fm = mb.addMenu(L['file'])
-        add_ds = QAction(L.get('add_data_source', 'Add Data Source'), self)
+        fm = mb.addMenu(L["file"])
+        add_ds = QAction(L.get("add_data_source", "Add Data Source"), self)
         add_ds.triggered.connect(self._on_add_data_source)
         fm.addAction(add_ds)
         fm.addSeparator()
-        a3 = QAction(L['export_pdf'], self)
+        a3 = QAction(L["export_pdf"], self)
         a3.triggered.connect(self.export_pdf)
         fm.addAction(a3)
-        a4 = QAction(L['export_excel'], self)
+        a4 = QAction(L["export_excel"], self)
         a4.triggered.connect(self.export_excel)
         fm.addAction(a4)
-        a5 = QAction(L['export_csv'], self)
+        a5 = QAction(L["export_csv"], self)
         a5.triggered.connect(self.export_csv)
         fm.addAction(a5)
-        nb = QAction('Export Notebook', self)
+        nb = QAction("Export Notebook", self)
         nb.triggered.connect(self.export_notebook)
         fm.addAction(nb)
 
         # Tutorial / Справка
-        hm = mb.addMenu(L['tutorial'])
-        tut = QAction(L['tutorial'], self)
+        hm = mb.addMenu(L["tutorial"])
+        tut = QAction(L["tutorial"], self)
         tut.triggered.connect(self.show_tutorial)
         hm.addAction(tut)
-
 
         # Language switch
         cw = QWidget()
@@ -673,19 +754,27 @@ class ABTestWindow(QMainWindow):
 
     def update_ui_text(self):
         L = self.i18n[self.lang]
-        self.setWindowTitle(L['title'])
-        self.tab_widget.setTabText(0, L['main'])
-        self.tab_widget.setTabText(1, L['history'])
+        self.setWindowTitle(L["title"])
+        self.tab_widget.setTabText(0, L["main"])
+        self.tab_widget.setTabText(1, L["history"])
 
         # Слайдерные лейблы
         g = self.baseline_slider.parentWidget().layout()
-        g.itemAt(0).widget().setText(f"{L['baseline']} {self.baseline_slider.value()/10:.1f}%")
-        g.itemAt(2).widget().setText(f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%")
-        g.itemAt(4).widget().setText(f"{L['alpha']} {self.alpha_slider.value()/100:.2f}")
-        g.itemAt(6).widget().setText(f"{L['power']} {self.power_slider.value()/100:.2f}")
+        g.itemAt(0).widget().setText(
+            f"{L['baseline']} {self.baseline_slider.value()/10:.1f}%"
+        )
+        g.itemAt(2).widget().setText(
+            f"{L['uplift']} {self.uplift_slider.value()/10:.1f}%"
+        )
+        g.itemAt(4).widget().setText(
+            f"{L['alpha']} {self.alpha_slider.value()/100:.2f}"
+        )
+        g.itemAt(6).widget().setText(
+            f"{L['power']} {self.power_slider.value()/100:.2f}"
+        )
 
         # Кнопки и поля
-        self.calc_button.setText(L['calculate_sample_size'])
+        self.calc_button.setText(L["calculate_sample_size"])
         for G in ["A", "B", "C"]:
             getattr(self, f"users_{G}_label").setText(
                 f"{G} – {'Пользователи' if self.lang=='RU' else 'Users'}:"
@@ -693,42 +782,84 @@ class ABTestWindow(QMainWindow):
             getattr(self, f"conv_{G}_label").setText(
                 f"{G} – {'Конверсии' if self.lang=='RU' else 'Conversions'}:"
             )
-        self.analyze_button.setText(L['analyze_ab'])
-        self.conf_button.setText(L['confidence_intervals'])
-        self.bayes_button.setText(L['bayesian_analysis'])
-        self.bandit_label.setText('Bandit:')
-        self.aa_button.setText(L['aa_testing'])
-        self.seq_button.setText(L['sequential_testing'])
-        self.obf_button.setText(L['obrien_fleming'])
-        self.revenue_per_user_label.setText(L['revenue_per_user'])
-        self.traffic_cost_label.setText(L['traffic_cost'])
-        self.budget_label.setText(L['budget'])
-        self.roi_button.setText(L['calculate_roi'])
-        self.load_pre_exp_button.setText(L['pre_exp_data'])
-        self.clear_button.setText(L['clear_results'])
-        self.plot_ci_button.setText(L['confidence_intervals'])
-        self.plot_power_button.setText(L['power_curve'])
-        self.plot_alpha_button.setText('α-spending')
-        self.plot_bootstrap_button.setText(L['bootstrap'])
-        self.save_plot_button.setText(L['save_plot'])
-        self.del_selected_button.setText(L['delete_selected'])
-        self.clear_history_button.setText(L['clear_history'])
+        self.analyze_button.setText(L["analyze_ab"])
+        self.conf_button.setText(L["confidence_intervals"])
+        self.bayes_button.setText(L["bayesian_analysis"])
+        self.bandit_label.setText("Bandit:")
+        self.aa_button.setText(L["aa_testing"])
+        self.seq_button.setText(L["sequential_testing"])
+        self.obf_button.setText(L["obrien_fleming"])
+        self.revenue_per_user_label.setText(L["revenue_per_user"])
+        self.traffic_cost_label.setText(L["traffic_cost"])
+        self.budget_label.setText(L["budget"])
+        self.roi_button.setText(L["calculate_roi"])
+        self.load_pre_exp_button.setText(L["pre_exp_data"])
+        self.clear_button.setText(L["clear_results"])
+        self.plot_ci_button.setText(L["confidence_intervals"])
+        self.plot_power_button.setText(L["power_curve"])
+        self.plot_alpha_button.setText("α-spending")
+        self.plot_bootstrap_button.setText(L["bootstrap"])
+        self.save_plot_button.setText(L["save_plot"])
+        self.del_selected_button.setText(L["delete_selected"])
+        self.clear_history_button.setText(L["clear_history"])
+
+    # ----- auth -----
+    def _setup_auth(self):
+        self._auth_buttons = [
+            self.calc_button,
+            self.analyze_button,
+            self.conf_button,
+            self.bayes_button,
+            self.aa_button,
+            self.seq_button,
+            self.obf_button,
+            self.roi_button,
+        ]
+        for b in self._auth_buttons:
+            if hasattr(b, "setEnabled"):
+                b.setEnabled(False)
+
+        if not hasattr(LoginDialog, "exec"):
+            return
+
+        dlg = LoginDialog(self)
+        if dlg.exec():
+            token = self._request_token(*dlg.credentials())
+            if token:
+                self.token = token
+                for b in self._auth_buttons:
+                    b.setEnabled(True)
+
+    def _request_token(self, username: str, password: str) -> str | None:
+        data = json.dumps({"username": username, "password": password}).encode()
+        req = urllib.request.Request(
+            "http://localhost:5000/login",
+            data=data,
+            headers={"Content-Type": "application/json"},
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=5) as resp:
+                return json.loads(resp.read().decode()).get("access_token")
+        except Exception:
+            return None
 
     # ————— Обработчики —————
 
     def calculate_sample_size(self):
         try:
-            p1     = self.baseline_slider.value()/1000
-            uplift = self.uplift_slider.value()/1000
-            alpha  = self.alpha_slider.value()/100
-            power  = self.power_slider.value()/100
-            p2     = p1*(1+uplift)
-            n      = required_sample_size(p1, p2, alpha, power)
-            mde    = calculate_mde(n, alpha, power, p1)
-            html = (f"<pre>CR A={p1:.2%}, CR B={p2:.2%}\n"
-                    f"α={alpha:.2f}, Power={power:.2f}\n\n"
-                    f"Size/group: {n}\n"
-                    f"MDE: {mde:.2%}</pre>")
+            p1 = self.baseline_slider.value() / 1000
+            uplift = self.uplift_slider.value() / 1000
+            alpha = self.alpha_slider.value() / 100
+            power = self.power_slider.value() / 100
+            p2 = p1 * (1 + uplift)
+            n = required_sample_size(p1, p2, alpha, power)
+            mde = calculate_mde(n, alpha, power, p1)
+            html = (
+                f"<pre>CR A={p1:.2%}, CR B={p2:.2%}\n"
+                f"α={alpha:.2f}, Power={power:.2f}\n\n"
+                f"Size/group: {n}\n"
+                f"MDE: {mde:.2%}</pre>"
+            )
             self.results_text.setHtml(html)
             self._add_history("Sample Size", html)
         except Exception as e:
@@ -789,33 +920,34 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            alpha  = self.alpha_slider.value()/100
-            fig    = plot_confidence_intervals(ua, ca, ub, cb, alpha)
+            alpha = self.alpha_slider.value() / 100
+            fig = plot_confidence_intervals(ua, ca, ub, cb, alpha)
             self._last_fig = fig
-            w      = PlotWindow(self)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
     def _on_plot_power_curve(self):
         try:
-            p1    = self.baseline_slider.value()/1000
-            alpha = self.alpha_slider.value()/100
-            pw    = self.power_slider.value()/100
-            fig   = plot_power_curve(p1, alpha, pw)
+            p1 = self.baseline_slider.value() / 1000
+            alpha = self.alpha_slider.value() / 100
+            pw = self.power_slider.value() / 100
+            fig = plot_power_curve(p1, alpha, pw)
             self._last_fig = fig
-            w     = PlotWindow(self)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
     def _on_plot_alpha_spending(self):
         try:
-            alpha = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
             fig = plot_alpha_spending(alpha, looks=5)
             self._last_fig = fig
             if self.alpha_plot_view:
                 import plotly.io as pio
+
                 html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
                 self.alpha_plot_view.setHtml(html)
                 self.alpha_plot_view.setVisible(True)
@@ -829,9 +961,9 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            fig    = plot_bootstrap_distribution(ua, ca, ub, cb)
+            fig = plot_bootstrap_distribution(ua, ca, ub, cb)
             self._last_fig = fig
-            w      = PlotWindow(self)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
@@ -840,26 +972,26 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            a0     = self.prior_alpha_spin.value()
-            b0     = self.prior_beta_spin.value()
+            a0 = self.prior_alpha_spin.value()
+            b0 = self.prior_beta_spin.value()
             prob, x, pa, pb = bayesian_analysis(a0, b0, ua, ca, ub, cb)
             html = f"<pre>P(B>A) = {prob:.2%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("Bayesian Analysis", html)
             fig = plot_bayesian_posterior(a0, b0, ua, ca, ub, cb)
             self._last_fig = fig
-            w   = PlotWindow(self)
+            w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
             show_error(self, str(e))
 
     def _on_run_aa(self):
         try:
-            p     = self.baseline_slider.value()/1000
-            n     = int(self.users_A_var.text()) + int(self.users_B_var.text())
-            alpha = self.alpha_slider.value()/100
-            fpr   = run_aa_simulation(p, n, alpha)
-            html  = f"<pre>Exp FPR: {alpha:.1%}, Actual FPR: {fpr:.1%}</pre>"
+            p = self.baseline_slider.value() / 1000
+            n = int(self.users_A_var.text()) + int(self.users_B_var.text())
+            alpha = self.alpha_slider.value() / 100
+            fpr = run_aa_simulation(p, n, alpha)
+            html = f"<pre>Exp FPR: {alpha:.1%}, Actual FPR: {fpr:.1%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("A/A Test", html)
             self._last_fig = None
@@ -870,7 +1002,7 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            alpha  = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
             steps, pa = run_sequential_analysis(ua, ca, ub, cb, alpha)
             txt = f"<pre>Pocock α={pa:.4f}\n"
             for i, r in enumerate(steps, 1):
@@ -886,7 +1018,7 @@ class ABTestWindow(QMainWindow):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
-            alpha  = self.alpha_slider.value()/100
+            alpha = self.alpha_slider.value() / 100
             steps = run_obrien_fleming(ua, ca, ub, cb, alpha)
             txt = "<pre>O'Brien-Fleming\n"
             for i, r in enumerate(steps, 1):
@@ -906,8 +1038,8 @@ class ABTestWindow(QMainWindow):
             rpu = float(self.revenue_per_user_var.text())
             cost = float(self.traffic_cost_var.text())
             bud = float(self.budget_var.text())
-            p1 = self.baseline_slider.value()/1000
-            up = self.uplift_slider.value()/1000
+            p1 = self.baseline_slider.value() / 1000
+            up = self.uplift_slider.value() / 1000
             u, br, nr, pf, ro = calculate_roi(rpu, cost, bud, p1, up)
             html = (
                 f"<pre>Users: {u:.0f}\n"
@@ -921,16 +1053,15 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
-
     def show_tutorial(self):
         QMessageBox.information(
             self,
-            self.i18n[self.lang]['tutorial'],
+            self.i18n[self.lang]["tutorial"],
             "🔹 Слайдеры CR, uplift, α, power\n"
             "🔹 Поля A/B/C\n"
             "🔹 Bayesian с priors\n"
             "🔹 ROI встроен\n"
-            "🔹 История с экспортом"
+            "🔹 История с экспортом",
         )
 
     def toggle_language(self):
@@ -953,11 +1084,8 @@ class ABTestWindow(QMainWindow):
 
     # ————— Сессионные функции и экспорт результатов —————
 
-
     def export_pdf(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save PDF", "", "PDF Files (*.pdf)"
-        )
+        path, _ = QFileDialog.getSaveFileName(self, "Save PDF", "", "PDF Files (*.pdf)")
         if not path:
             return
         try:
@@ -986,9 +1114,7 @@ class ABTestWindow(QMainWindow):
             show_error(self, str(e))
 
     def export_csv(self):
-        path, _ = QFileDialog.getSaveFileName(
-            self, "Save CSV", "", "CSV Files (*.csv)"
-        )
+        path, _ = QFileDialog.getSaveFileName(self, "Save CSV", "", "CSV Files (*.csv)")
         if not path:
             return
         try:
