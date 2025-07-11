@@ -1,4 +1,9 @@
-"""Data source connectors for BigQuery and Redshift."""
+"""Data source connectors for BigQuery and Redshift.
+
+Both connectors rely on the official client libraries. They are imported
+inside the initializer so that the optional dependencies are only required
+when a particular connector is used.
+"""
 
 from typing import Any, Dict, List
 
@@ -19,14 +24,20 @@ class BigQueryConnector:
 
 
 class RedshiftConnector:
-    """Simple Redshift connector using psycopg2."""
+    """Redshift connector using the official ``redshift-connector`` package."""
 
     def __init__(self, host: str, port: int, database: str, user: str, password: str) -> None:
         try:
-            import psycopg2  # type: ignore
+            import redshift_connector  # type: ignore
         except Exception:  # pragma: no cover - optional dependency
-            raise ImportError("psycopg2 is required for RedshiftConnector")
-        self._conn = psycopg2.connect(host=host, port=port, dbname=database, user=user, password=password)
+            raise ImportError("redshift-connector is required for RedshiftConnector")
+        self._conn = redshift_connector.connect(
+            host=host,
+            port=port,
+            database=database,
+            user=user,
+            password=password,
+        )
 
     def query(self, sql: str) -> List[Dict[str, Any]]:
         with self._conn.cursor() as cur:

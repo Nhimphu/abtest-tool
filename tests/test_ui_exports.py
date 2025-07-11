@@ -219,3 +219,31 @@ def test_analyze_abn_triggers_srm(monkeypatch):
     assert warned.get('called')
 
 
+def test_add_data_source_dialog(monkeypatch):
+    dlg = ui_mainwindow.AddDataSourceDialog(None)
+    dlg.type_combo.currentText = lambda: 'Redshift'
+    dlg.rs_host.text = lambda: 'h'
+    dlg.rs_port.text = lambda: '5439'
+    dlg.rs_db.text = lambda: 'db'
+    dlg.rs_user.text = lambda: 'u'
+    dlg.rs_pass.text = lambda: 'p'
+    assert dlg.data() == {
+        'type': 'redshift',
+        'host': 'h',
+        'port': '5439',
+        'database': 'db',
+        'user': 'u',
+        'password': 'p',
+    }
+
+    recorded = {}
+    class DummyConn:
+        def query(self, sql):
+            recorded['sql'] = sql
+    import utils.connectors as connectors
+    monkeypatch.setattr(connectors, 'RedshiftConnector', lambda *a, **k: DummyConn())
+    ui_mainwindow.QMessageBox.information = lambda *a, **k: recorded.setdefault('ok', True)
+    assert dlg._on_test()
+    assert recorded['sql'] == 'SELECT 1'
+
+

@@ -64,6 +64,9 @@ i18n = {
         "database": "База",
         "user": "Пользователь",
         "password": "Пароль",
+        "test_connection": "Проверить подключение",
+        "conn_ok": "Успешное подключение",
+        "conn_fail": "Ошибка подключения",
     },
     "EN": {
         "title": "Ultimate A/B Testing Tool",
@@ -128,6 +131,9 @@ i18n = {
         "database": "Database",
         "user": "User",
         "password": "Password",
+        "test_connection": "Test Connection",
+        "conn_ok": "Connection successful",
+        "conn_fail": "Connection failed",
     },
 }
 
