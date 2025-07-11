@@ -160,6 +160,11 @@ def test_run_obrien_fleming_steps():
     assert isinstance(steps, list) and steps
     assert 'threshold' in steps[0]
 
+def test_run_obrien_fleming_threshold_used():
+    steps = run_obrien_fleming(100, 10, 100, 20, alpha=0.05, looks=3)
+    thr = steps[0]['threshold']
+    assert steps[0]['significant_ab'] == (steps[0]['p_value_ab'] < thr)
+
 
 def test_sequential_webhook_called(monkeypatch):
     import logic
