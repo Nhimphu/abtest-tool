@@ -6,7 +6,7 @@ QWidget {
 }
 
 QPushButton {
-    padding: 5px;
+    padding: 5px 5px 5px 25px; /* extra left padding for icons */
     border: 1px solid #888;
     border-radius: 4px;
 }

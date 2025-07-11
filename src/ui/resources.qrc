@@ -1,0 +1,7 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource prefix="/resources">
+    <file>resources/run.svg</file>
+    <file>resources/export.svg</file>
+    <file>resources/undo.svg</file>
+</qresource>
+</RCC>
