@@ -28,7 +28,13 @@ def trapz(y, x):
 
 np_mod.trapz = trapz
 np_mod.ndarray = list
+rand_mod = types.ModuleType('numpy.random')
+rand_mod.binomial = lambda n, p, size=None: [0]
+rand_mod.randint = lambda a, b=None: 0
+rand_mod.random = lambda: 0.0
+np_mod.random = rand_mod
 sys.modules['numpy'] = np_mod
+sys.modules['numpy.random'] = rand_mod
 
 # simple beta pdf/cdf helpers
 

@@ -28,12 +28,13 @@ if 'numpy' not in sys.modules:
     np_mod.cov = cov
     np_mod.var = lambda x, ddof=1: sum((xi - sum(x)/len(x))**2 for xi in x) / (len(x)-ddof)
     np_mod.trapz = lambda y, x: sum((y[i] + y[i+1]) * (x[i+1] - x[i]) / 2 for i in range(len(y)-1))
-    np_mod.random = types.SimpleNamespace(
-        binomial=lambda n, p, size=None: [0],
-        randint=lambda a, b=None: 0,
-        random=lambda: 0.0,
-    )
+    rand_mod = types.ModuleType('numpy.random')
+    rand_mod.binomial = lambda n, p, size=None: [0]
+    rand_mod.randint = lambda a, b=None: 0
+    rand_mod.random = lambda: 0.0
+    np_mod.random = rand_mod
     sys.modules['numpy'] = np_mod
+    sys.modules['numpy.random'] = rand_mod
 
 if 'scipy.stats' not in sys.modules:
     nd = statistics.NormalDist()
