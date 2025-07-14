@@ -12,6 +12,7 @@ try:
         QCheckBox,
     )
 except Exception:  # pragma: no cover - allow tests without PyQt installed
+
     class _Widget:
         def __init__(self, *a, **k):
             self._text = ""
@@ -47,9 +48,14 @@ except Exception:  # pragma: no cover - allow tests without PyQt installed
             "addPage": lambda *a, **k: None,
             "setButtonText": lambda *a, **k: None,
             "exec": lambda *a, **k: 1,
+            "tr": lambda self, text: text,
         },
     )
-    QWizardPage = type("QWizardPage", (), {"setTitle": lambda *a, **k: None})
+    QWizardPage = type(
+        "QWizardPage",
+        (),
+        {"setTitle": lambda *a, **k: None, "tr": lambda self, text: text},
+    )
     QVBoxLayout = QHBoxLayout = type(
         "Layout",
         (),
@@ -70,19 +76,21 @@ class QuickABTestWizard(QWizard):
                 self.setStyleSheet(parent.styleSheet())
             except Exception:
                 pass
-        self.setWindowTitle("Quick AB Test")
+        self.setWindowTitle(self.tr("Quick AB Test"))
 
         self.addPage(self._build_flags_page())
         self.addPage(self._build_metrics_page())
         self.addPage(self._build_options_page())
 
         finish_const = None
-        if hasattr(QWizard, "WizardButton") and hasattr(QWizard.WizardButton, "FinishButton"):
+        if hasattr(QWizard, "WizardButton") and hasattr(
+            QWizard.WizardButton, "FinishButton"
+        ):
             finish_const = QWizard.WizardButton.FinishButton
         else:
             finish_const = getattr(QWizard, "FinishButton", 3)
         try:
-            self.setButtonText(finish_const, "Start")
+            self.setButtonText(finish_const, self.tr("Start"))
         except Exception:
             pass
 
@@ -93,26 +101,40 @@ class QuickABTestWizard(QWizard):
         options_page = self.page(2)
 
         return {
-            "flag": getattr(getattr(flags_page, "flag_combo", None), "currentText", lambda: "")(),
-            "rollout": getattr(getattr(flags_page, "rollout_edit", None), "text", lambda: "")(),
-            "primary_metric": getattr(getattr(metrics_page, "primary_edit", None), "text", lambda: "")(),
-            "custom_metrics": getattr(getattr(metrics_page, "custom_edit", None), "text", lambda: "")(),
-            "sequential": getattr(getattr(options_page, "seq_check", None), "isChecked", lambda: False)(),
-            "cuped": getattr(getattr(options_page, "cuped_check", None), "isChecked", lambda: False)(),
-            "srm": getattr(getattr(options_page, "srm_check", None), "isChecked", lambda: False)(),
+            "flag": getattr(
+                getattr(flags_page, "flag_combo", None), "currentText", lambda: ""
+            )(),
+            "rollout": getattr(
+                getattr(flags_page, "rollout_edit", None), "text", lambda: ""
+            )(),
+            "primary_metric": getattr(
+                getattr(metrics_page, "primary_edit", None), "text", lambda: ""
+            )(),
+            "custom_metrics": getattr(
+                getattr(metrics_page, "custom_edit", None), "text", lambda: ""
+            )(),
+            "sequential": getattr(
+                getattr(options_page, "seq_check", None), "isChecked", lambda: False
+            )(),
+            "cuped": getattr(
+                getattr(options_page, "cuped_check", None), "isChecked", lambda: False
+            )(),
+            "srm": getattr(
+                getattr(options_page, "srm_check", None), "isChecked", lambda: False
+            )(),
         }
 
     def _build_flags_page(self) -> QWizardPage:
         page = QWizardPage()
-        page.setTitle("Flags")
+        page.setTitle(self.tr("Flags"))
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("Feature Flag"))
+        layout.addWidget(QLabel(self.tr("Feature Flag")))
         page.flag_combo = QComboBox()
         layout.addWidget(page.flag_combo)
 
-        layout.addWidget(QLabel("Rollout %"))
+        layout.addWidget(QLabel(self.tr("Rollout %")))
         page.rollout_edit = QLineEdit()
         page.rollout_edit.setPlaceholderText("0-100")
         layout.addWidget(page.rollout_edit)
@@ -121,15 +143,15 @@ class QuickABTestWizard(QWizard):
 
     def _build_metrics_page(self) -> QWizardPage:
         page = QWizardPage()
-        page.setTitle("Metrics")
+        page.setTitle(self.tr("Metrics"))
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        layout.addWidget(QLabel("Primary metric"))
+        layout.addWidget(QLabel(self.tr("Primary metric")))
         page.primary_edit = QLineEdit()
         layout.addWidget(page.primary_edit)
 
-        layout.addWidget(QLabel("Custom metrics"))
+        layout.addWidget(QLabel(self.tr("Custom metrics")))
         page.custom_edit = QLineEdit()
         layout.addWidget(page.custom_edit)
 
@@ -137,19 +159,20 @@ class QuickABTestWizard(QWizard):
 
     def _build_options_page(self) -> QWizardPage:
         page = QWizardPage()
-        page.setTitle("Options")
+        page.setTitle(self.tr("Options"))
         layout = QVBoxLayout(page)
         layout.setContentsMargins(0, 0, 0, 0)
 
-        page.seq_check = QCheckBox("Sequential analysis")
+        page.seq_check = QCheckBox(self.tr("Sequential analysis"))
         layout.addWidget(page.seq_check)
 
-        page.cuped_check = QCheckBox("CUPED adjustment")
+        page.cuped_check = QCheckBox(self.tr("CUPED adjustment"))
         layout.addWidget(page.cuped_check)
 
-        page.srm_check = QCheckBox("SRM check")
+        page.srm_check = QCheckBox(self.tr("SRM check"))
         layout.addWidget(page.srm_check)
 
         return page
+
 
 __all__ = ["QuickABTestWizard"]
