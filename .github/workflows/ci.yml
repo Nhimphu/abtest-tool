@@ -23,7 +23,7 @@ jobs:
       - name: Build translations
         run: |
           pylupdate6 src/ui/ui_mainwindow.py src/ui/wizard.py src/main.py \
-            -ts translations/app_ru.ts translations/app_en.ts
+            -ts translations/app_ru.ts -ts translations/app_en.ts
           lrelease translations/app_ru.ts -qm translations/app_ru.qm
           lrelease translations/app_en.ts -qm translations/app_en.qm
           if grep -q 'type="unfinished"' translations/app_ru.ts translations/app_en.ts; then
