@@ -17,6 +17,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install coverage coverage-badge
+      - name: Install Qt runtime libs
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1-mesa-glx libxkbcommon-x11-0
       - name: Run tests
         run: |
           coverage run -m pytest -q

@@ -1,4 +1,8 @@
+import importlib
 import pytest
+
+pytest.importorskip("PyQt6")
+
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QWizard
 
