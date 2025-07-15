@@ -4,11 +4,12 @@ sys.path.insert(0, os.path.abspath('../src'))
 
 project = 'abtest-tool'
 author = 'Nhimphu'
-release = '0.1'
+release = '1.0.1'
 
 extensions = [
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon',
+    'myst_parser',
 ]
 
 templates_path = ['_templates']

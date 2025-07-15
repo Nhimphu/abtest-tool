@@ -8,6 +8,7 @@ Welcome to ABTest Tool's documentation!
    quickstart
    api_reference
    cookbook
+   changelog
 
 The documentation is structured into three main sections:
 
