@@ -33,7 +33,7 @@ def run_migrations(db: Union[str, sqlite3.Connection]) -> None:
     # Try alembic if available
     try:
         from alembic.config import Config
-        from alembic import command
+        from alembic import command  # type: ignore[attr-defined]
 
         cfg_path = Path(__file__).resolve().parent.parent / "alembic.ini"
         if cfg_path.exists():

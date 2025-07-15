@@ -1,3 +1,5 @@
+from typing import Any
+
 try:
     from PyQt6.QtWidgets import (
         QWidget,
@@ -21,7 +23,7 @@ except Exception:  # pragma: no cover - allow running tests without PyQt install
     )
 
     class DummySig:
-        def connect(self, *a, **k):
+        def connect(self, *a: Any, **k: Any) -> None:
             pass
 
     QLabel = QLineEdit = QPushButton = type(
@@ -57,9 +59,9 @@ class SettingsWidget(QWidget):
         self.metric_edit.setPlaceholderText('sum("conv")/sum("users")')
 
         self.webhook_edit = QLineEdit()
-        self.webhook_edit.setPlaceholderText('https://example.com/webhook')
-        self.test_button = QPushButton('Test webhook')
-        if hasattr(self.test_button, 'clicked'):
+        self.webhook_edit.setPlaceholderText("https://example.com/webhook")
+        self.test_button = QPushButton("Test webhook")
+        if hasattr(self.test_button, "clicked"):
             self.test_button.clicked.connect(self._on_test_webhook)  # type: ignore
 
         layout = QVBoxLayout(self)
@@ -80,7 +82,10 @@ class SettingsWidget(QWidget):
         except Exception as e:  # ValueError
             self.metric_edit.setToolTip(str(e))
             if hasattr(QToolTip, "showText"):
-                QToolTip.showText(self.metric_edit.mapToGlobal(self.metric_edit.rect().bottomLeft()), str(e))
+                QToolTip.showText(
+                    self.metric_edit.mapToGlobal(self.metric_edit.rect().bottomLeft()),
+                    str(e),
+                )
         else:
             self.metric_edit.setToolTip("")
             if callable(self.metric_changed):
@@ -106,4 +111,3 @@ class SettingsWidget(QWidget):
 
         if callable(self.log_message):
             self.log_message.emit(msg)  # type: ignore
-

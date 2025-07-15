@@ -10,22 +10,26 @@ if _plug and hasattr(_plug, "BigQueryConnector"):
     BigQueryConnector = _plug.BigQueryConnector  # type: ignore
 else:
 
-    class BigQueryConnector:
+    class _DummyBigQueryConnector:
         """Fallback that signals missing plugin."""
 
         def __init__(self, *_: Any, **__: Any) -> None:
             raise ImportError("BigQueryConnector plugin not available")
+
+    BigQueryConnector = _DummyBigQueryConnector
 
 
 if _plug and hasattr(_plug, "RedshiftConnector"):
     RedshiftConnector = _plug.RedshiftConnector  # type: ignore
 else:
 
-    class RedshiftConnector:
+    class _DummyRedshiftConnector:
         """Fallback that signals missing plugin."""
 
         def __init__(self, *_: Any, **__: Any) -> None:
             raise ImportError("RedshiftConnector plugin not available")
+
+    RedshiftConnector = _DummyRedshiftConnector
 
 
 __all__ = ["BigQueryConnector", "RedshiftConnector"]

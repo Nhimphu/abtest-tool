@@ -1,6 +1,6 @@
 import math
 import types
-from typing import List, Optional
+from typing import Any, List, Optional, Dict
 
 from metrics import track_time
 import plugin_loader
@@ -9,47 +9,59 @@ try:
     import numpy as np
 except Exception:
     np = types.SimpleNamespace(
-        linspace=lambda a,b,n:[a+(b-a)*i/(n-1) for i in range(n)],
-        random=types.SimpleNamespace(binomial=lambda *a,**k:[0], randint=lambda a,b=None:0, random=lambda:0.0),
-        argmax=lambda arr:max(range(len(arr)), key=lambda i: arr[i]),
-        trapz=lambda y,x: sum((y[i]+y[i+1])*(x[i+1]-x[i])/2 for i in range(len(y)-1))
+        linspace=lambda a, b, n: [a + (b - a) * i / (n - 1) for i in range(n)],
+        random=types.SimpleNamespace(
+            binomial=lambda *a, **k: [0],
+            randint=lambda a, b=None: 0,
+            random=lambda: 0.0,
+        ),
+        argmax=lambda arr: max(range(len(arr)), key=lambda i: arr[i]),
+        trapz=lambda y, x: sum(
+            (y[i] + y[i + 1]) * (x[i + 1] - x[i]) / 2 for i in range(len(y) - 1)
+        ),
     )
 try:
     from scipy.stats import norm, beta, chi2
 except Exception:
     import statistics, math as _math
+
     class _Norm:
-        ppf=staticmethod(lambda p: statistics.NormalDist().inv_cdf(p))
-        cdf=staticmethod(lambda x: statistics.NormalDist().cdf(x))
+        ppf = staticmethod(lambda p: statistics.NormalDist().inv_cdf(p))
+        cdf = staticmethod(lambda x: statistics.NormalDist().cdf(x))
+
     class _Beta:
-        pdf=staticmethod(lambda *a,**k: None)
-        cdf=staticmethod(lambda *a,**k: None)
+        pdf = staticmethod(lambda *a, **k: None)
+        cdf = staticmethod(lambda *a, **k: None)
+
     class _Chi2:
-        cdf=staticmethod(lambda x, df: 1 - _math.exp(-x/2))
-    norm=_Norm(); beta=_Beta(); chi2=_Chi2()
+        cdf = staticmethod(lambda x, df: 1 - _math.exp(-x / 2))
+
+    norm = _Norm()
+    beta = _Beta()
+    chi2 = _Chi2()
 
 from webhooks import send_webhook
 
 
 @track_time
-def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> int:
+def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> float:
     """Размер выборки на группу (двусторонний тест разности пропорций)."""
     if p1 == p2 or p1 <= 0 or p2 <= 0:
-        return float('inf')
+        return float("inf")
     z_alpha = norm.ppf(1 - alpha / 2)
     z_beta = norm.ppf(power)
     p_avg = (p1 + p2) / 2
     se_pooled = math.sqrt(2 * p_avg * (1 - p_avg))
     se_effect = math.sqrt(p1 * (1 - p1) + p2 * (1 - p2))
     n = ((z_alpha * se_pooled + z_beta * se_effect) ** 2) / ((p1 - p2) ** 2)
-    return max(1, math.ceil(n))
+    return float(max(1, math.ceil(n)))
 
 
 @track_time
 def calculate_mde(sample_size: int, alpha: float, power: float, p1: float) -> float:
     """Минимальная обнаруживаемая разница при данных sample_size."""
     if sample_size <= 0 or p1 <= 0:
-        return float('inf')
+        return float("inf")
     z_alpha = norm.ppf(1 - alpha / 2)
     z_beta = norm.ppf(power)
     se = math.sqrt(2 * p1 * (1 - p1) / sample_size)
@@ -57,6 +69,7 @@ def calculate_mde(sample_size: int, alpha: float, power: float, p1: float) -> fl
 
 
 # ----- A/B/N test helpers -----
+
 
 def _evaluate_abn_test(
     users_a: int,
@@ -66,7 +79,7 @@ def _evaluate_abn_test(
     users_c: Optional[int] = None,
     conv_c: Optional[int] = None,
     alpha: float = 0.05,
-):
+) -> Dict[str, Any]:
     """Внутренний A/B/n z-тест (Bonferroni)."""
 
     if users_a <= 0 or users_b <= 0:
@@ -86,7 +99,11 @@ def _evaluate_abn_test(
 
     cr_a = conv_a / users_a
     cr_b = conv_b / users_b
-    cr_c = conv_c / users_c if users_c is not None and conv_c is not None else None
+    cr_c: Optional[float]
+    if users_c is not None and conv_c is not None:
+        cr_c = conv_c / users_c
+    else:
+        cr_c = None
 
     if users_c is not None and conv_c is not None:
         pooled = (conv_a + conv_b + conv_c) / (users_a + users_b + users_c)
@@ -97,7 +114,7 @@ def _evaluate_abn_test(
     z_ab = (cr_b - cr_a) / se_ab if se_ab > 0 else 0
     p_ab = 2 * (1 - norm.cdf(abs(z_ab)))
 
-    if users_c is not None and conv_c is not None:
+    if users_c is not None and conv_c is not None and cr_c is not None:
         se_ac = math.sqrt(pooled * (1 - pooled) * (1 / users_a + 1 / users_c))
         z_ac = (cr_c - cr_a) / se_ac if se_ac > 0 else 0
         p_ac = 2 * (1 - norm.cdf(abs(z_ac)))
@@ -117,10 +134,15 @@ def _evaluate_abn_test(
     uplift_ab = (cr_b - cr_a) / cr_a * 100 if cr_a > 0 else 0
 
     if users_c is not None and conv_c is not None:
+        assert cr_c is not None
         winner = (
             "B"
             if sig_ab and cr_b > cr_a
-            else "C" if sig_ac and cr_c > cr_a else "A" if not sig_ab and not sig_ac else "None"
+            else (
+                "C"
+                if sig_ac and cr_c > cr_a
+                else "A" if not sig_ab and not sig_ac else "None"
+            )
         )
     else:
         winner = "B" if sig_ab and cr_b > cr_a else "A" if not sig_ab else "None"
@@ -145,15 +167,26 @@ _bayes_plug = plugin_loader.get_plugin("bayesian")
 
 
 @track_time
-def bayesian_analysis(alpha_prior: float, beta_prior: float, users_a: int, conv_a: int, users_b: int, conv_b: int):
+def bayesian_analysis(
+    alpha_prior: float,
+    beta_prior: float,
+    users_a: int,
+    conv_a: int,
+    users_b: int,
+    conv_b: int,
+) -> tuple[float, list[float], list[float], list[float]]:
     """Bayesian A/B analysis delegated to plugin if available."""
     if _bayes_plug and hasattr(_bayes_plug, "bayesian_analysis"):
-        return _bayes_plug.bayesian_analysis(alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b)
+        return _bayes_plug.bayesian_analysis(
+            alpha_prior, beta_prior, users_a, conv_a, users_b, conv_b
+        )
     raise ImportError("Bayesian analysis plugin not available")
 
 
 @track_time
-def run_aa_simulation(baseline: float, total_users: int, alpha: float, num_sim: int = 1000) -> float:
+def run_aa_simulation(
+    baseline: float, total_users: int, alpha: float, num_sim: int = 1000
+) -> float:
     """A/A симуляция, возвращает фактический FPR."""
     ua = total_users // 2
     ub = total_users - ua
@@ -180,9 +213,11 @@ def evaluate_abn_test(
     conv_c: Optional[int] = None,
     metrics: int = 1,
     alpha: float = 0.05,
-):
+) -> Dict[str, Any]:
     """A/B/n тест с поправкой FDR (Benjamini–Hochberg)."""
-    res = _evaluate_abn_test(users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha)
+    res = _evaluate_abn_test(
+        users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha
+    )
     p = res["p_value_ab"]
     m = max(1, int(metrics))
     p_adj = min(p * m, 1.0)
@@ -192,7 +227,15 @@ def evaluate_abn_test(
 
 
 @track_time
-def run_sequential_analysis(ua: int, ca: int, ub: int, cb: int, alpha: float, looks: int = 5, webhook_url: Optional[str] = None):
+def run_sequential_analysis(
+    ua: int,
+    ca: int,
+    ub: int,
+    cb: int,
+    alpha: float,
+    looks: int = 5,
+    webhook_url: Optional[str] = None,
+) -> tuple[list[Dict[str, Any]], float]:
     """Sequential Pocock method."""
     if looks <= 0:
         raise ValueError("looks must be positive")
@@ -218,7 +261,15 @@ def run_sequential_analysis(ua: int, ca: int, ub: int, cb: int, alpha: float, lo
 
 
 @track_time
-def run_obrien_fleming(ua: int, ca: int, ub: int, cb: int, alpha: float, looks: int = 5, webhook_url: Optional[str] = None):
+def run_obrien_fleming(
+    ua: int,
+    ca: int,
+    ub: int,
+    cb: int,
+    alpha: float,
+    looks: int = 5,
+    webhook_url: Optional[str] = None,
+) -> list[Dict[str, Any]]:
     """Sequential O'Brien-Fleming method."""
     if looks <= 0:
         raise ValueError("looks must be positive")
@@ -246,7 +297,9 @@ def run_obrien_fleming(ua: int, ca: int, ub: int, cb: int, alpha: float, looks: 
     return steps
 
 
-def calculate_roi(rpu: float, cost: float, budget: float, baseline_cr: float, uplift: float):
+def calculate_roi(
+    rpu: float, cost: float, budget: float, baseline_cr: float, uplift: float
+) -> tuple[float, float, float, float, float]:
     """Return ROI metrics."""
     users = budget / cost
     base_rev = users * baseline_cr * rpu
@@ -258,7 +311,8 @@ def calculate_roi(rpu: float, cost: float, budget: float, baseline_cr: float, up
 
 # ----- Additional helpers -----
 
-def cuped_adjustment(x: List[float], covariate: List[float]):
+
+def cuped_adjustment(x: List[float], covariate: List[float]) -> List[float]:
     """Return CUPED-adjusted metric array."""
     x = [float(v) for v in x]
     c = [float(v) for v in covariate]
@@ -272,16 +326,18 @@ def cuped_adjustment(x: List[float], covariate: List[float]):
     return [xi - theta * ci for xi, ci in zip(x, c)]
 
 
-def srm_check(users_a: int, users_b: int, alpha: float = 0.05):
+def srm_check(users_a: int, users_b: int, alpha: float = 0.05) -> tuple[bool, float]:
     """Simple SRM check using chi-square test."""
     total = users_a + users_b
     expected = total / 2
-    chi_sq = ((users_a - expected) ** 2) / expected + ((users_b - expected) ** 2) / expected
+    chi_sq = ((users_a - expected) ** 2) / expected + (
+        (users_b - expected) ** 2
+    ) / expected
     p = 1 - chi2.cdf(chi_sq, df=1)
     return p < alpha, p
 
 
-def pocock_alpha_curve(alpha: float, looks: int):
+def pocock_alpha_curve(alpha: float, looks: int) -> List[float]:
     """Return Pocock alpha spending thresholds per look."""
     if looks <= 0:
         raise ValueError("looks must be positive")
