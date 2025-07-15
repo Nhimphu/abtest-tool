@@ -34,13 +34,13 @@ def main(cfg=config) -> None:
     locale = QLocale.system().name().split("_")[0]
     translations_dir = Path(__file__).resolve().parents[1] / "translations"
     if translator.load(str(translations_dir / f"app_{locale}.qm")):
-        app.installTranslator(translator)
+        current_lang = locale
     else:
-        # Fallback to English if translation for the current locale isn't found
         translator.load(str(translations_dir / "app_en.qm"))
-        app.installTranslator(translator)
+        current_lang = "en"
+    app.installTranslator(translator)
 
-    window = ABTestWindow(cfg)
+    window = ABTestWindow(cfg, translator=translator, lang=current_lang)
     # Skip authentication when running locally
     window.show()
     sys.exit(app.exec())

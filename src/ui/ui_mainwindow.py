@@ -50,7 +50,7 @@ except Exception:  # pragma: no cover - optional
 
 
 try:
-    from PyQt6.QtCore import Qt, QDateTime, QEvent, QDir
+    from PyQt6.QtCore import Qt, QDateTime, QEvent, QDir, QTranslator, QLocale
 except Exception:  # pragma: no cover - optional
     from PyQt6.QtCore import Qt, QDateTime  # type: ignore
 
@@ -63,6 +63,15 @@ except Exception:  # pragma: no cover - optional
         @staticmethod
         def addSearchPath(*a, **k):
             pass
+
+    class QTranslator:
+        def load(self, *a, **k):
+            return False
+
+    class QLocale:
+        @staticmethod
+        def system():
+            return type("QLocale", (), {"name": lambda: "en_US"})()
 
 
 from .widgets import with_help_label
@@ -408,12 +417,20 @@ class AddDataSourceDialog:
 
 
 class ABTestWindow(QMainWindow):
-    def __init__(self, cfg=None):
+    def __init__(self, cfg=None, translator=None, lang=None):
         super().__init__()
 
         from utils.config import config as _cfg
 
         self._config = cfg or _cfg
+
+        # Language setup
+        self.translator = translator or QTranslator()
+        self.lang = lang or QLocale.system().name().split("_")[0]
+        if translator is None:
+            self._load_translation(self.lang)
+        else:
+            QApplication.instance().installTranslator(self.translator)
 
         # Начальные настройки темы
         self.is_dark = self._config.get("theme", "dark") == "dark"
@@ -764,7 +781,7 @@ class ABTestWindow(QMainWindow):
         )
         self.history_table.setSortingEnabled(True)
         self.history_filter = QLineEdit()
-        self.history_filter.setPlaceholderText("Filter history")
+        self.history_filter.setPlaceholderText(self.tr("Filter history"))
         self.history_filter.textChanged.connect(self._filter_history)
         self.delete_button = QPushButton()
         self.delete_button.clicked.connect(self._on_delete_selected)
@@ -823,12 +840,12 @@ class ABTestWindow(QMainWindow):
         left.addWidget(getattr(self, f"conv_{G}_var"))
 
         left.addWidget(self.analyze_button)
-        advanced_box = QGroupBox("Advanced")
+        advanced_box = QGroupBox(self.tr("Advanced"))
         advanced_box.setCheckable(True)
         adv_layout = QVBoxLayout(advanced_box)
 
-        alpha_prior_label = QLabel("α-prior:")
-        beta_prior_label = QLabel("β-prior:")
+        alpha_prior_label = QLabel(self.tr("α-prior:"))
+        beta_prior_label = QLabel(self.tr("β-prior:"))
         bandit_help = with_help_label(self.bandit_label, "Bandit strategy")
         rpu_help = with_help_label(self.revenue_per_user_label, "Revenue per user")
         cost_help = with_help_label(self.traffic_cost_label, "Traffic cost per user")
@@ -973,14 +990,18 @@ class ABTestWindow(QMainWindow):
         tut.triggered.connect(self.show_tutorial)
         hm.addAction(tut)
 
-        # Language switch
+        # Language & theme switch
         cw = QWidget()
         cl = QHBoxLayout(cw)
         cl.setContentsMargins(0, 0, 0, 0)
         cl.setAlignment(Qt.AlignmentFlag.AlignRight)
+        self.lang_button = QPushButton("RU" if self.lang == "en" else "EN")
+        self.lang_button.setFixedSize(30, 30)
+        self.lang_button.clicked.connect(self.toggle_language)
         self.theme_button = QPushButton(self.tr("☀"))
         self.theme_button.setFixedSize(30, 30)
         self.theme_button.clicked.connect(self.toggle_theme)
+        cl.addWidget(self.lang_button)
         cl.addWidget(self.theme_button)
         mb.setCornerWidget(cw, Qt.Corner.TopRightCorner)
 
@@ -1038,6 +1059,24 @@ class ABTestWindow(QMainWindow):
         QApplication.setPalette(p)
         # Сброс custom stylesheet, если есть
         self.setStyleSheet("")
+
+    def _load_translation(self, lang: str) -> bool:
+        """Load Qt translation for the given language."""
+        translations_dir = Path(__file__).resolve().parents[1] / "translations"
+        qm_path = translations_dir / f"app_{lang}.qm"
+        if not qm_path.exists():
+            QMessageBox.critical(self, "Error", f"{qm_path} not found")
+            return False
+        app = QApplication.instance()
+        if hasattr(self, "translator"):
+            app.removeTranslator(self.translator)
+        self.translator = QTranslator()
+        if not self.translator.load(str(qm_path)):
+            QMessageBox.critical(self, "Error", f"Failed to load {qm_path}")
+            return False
+        app.installTranslator(self.translator)
+        self.lang = lang
+        return True
 
     def update_ui_text(self):
         self.setWindowTitle(self.tr("Ultimate A/B Testing Tool"))
@@ -1140,10 +1179,10 @@ class ABTestWindow(QMainWindow):
             n = required_sample_size(p1, p2, alpha, power)
             mde = calculate_mde(n, alpha, power, p1)
             html = (
-                f"<pre>CR A={p1:.2%}, CR B={p2:.2%}\n"
-                f"α={alpha:.2f}, Power={power:.2f}\n\n"
-                f"Size/group: {n}\n"
-                f"MDE: {mde:.2%}</pre>"
+                f"<pre>{self.tr('CR A')}={p1:.2%}, {self.tr('CR B')}={p2:.2%}\n"
+                f"α={alpha:.2f}, {self.tr('Power')}={power:.2f}\n\n"
+                f"{self.tr('Size/group')}: {n}\n"
+                f"{self.tr('MDE')}: {mde:.2%}</pre>"
             )
             self.results_text.setHtml(html)
             self._add_history("Sample Size", html)
@@ -1188,11 +1227,11 @@ class ABTestWindow(QMainWindow):
 
             res = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
             html = (
-                f"<pre>A {res['cr_a']:.2%} ({ca}/{ua})\n"
-                f"B {res['cr_b']:.2%} ({cb}/{ub})\n"
-                f"C {res['cr_c']:.2%} ({cc}/{uc})\n\n"
-                f"P(A vs B)={res['p_value_ab']:.4f}\n"
-                f"Winner: {res['winner']}</pre>"
+                f"<pre>{self.tr('A')} {res['cr_a']:.2%} ({ca}/{ua})\n"
+                f"{self.tr('B')} {res['cr_b']:.2%} ({cb}/{ub})\n"
+                f"{self.tr('C')} {res['cr_c']:.2%} ({cc}/{uc})\n\n"
+                f"{self.tr('P(A vs B)')}={res['p_value_ab']:.4f}\n"
+                f"{self.tr('Winner')}: {res['winner']}</pre>"
             )
             self.results_text.setHtml(html)
             self._add_history("A/B/n Test", html)
@@ -1263,7 +1302,8 @@ class ABTestWindow(QMainWindow):
             if not plug or not hasattr(plug, "bayesian_analysis"):
                 raise ImportError("Bayesian analysis plugin not available")
             prob, x, pa, pb = plug.bayesian_analysis(a0, b0, ua, ca, ub, cb)
-            html = f"<pre>P(B>A) = {prob:.2%}</pre>"
+            tr = getattr(self, "tr", lambda x: x)
+            html = f"<pre>{tr('P(B>A)')} = {prob:.2%}</pre>"
             self.results_text.setHtml(html)
             self._add_history("Bayesian Analysis", html)
             fig = plot_bayesian_posterior(a0, b0, ua, ca, ub, cb)
@@ -1279,7 +1319,10 @@ class ABTestWindow(QMainWindow):
             n = int(self.users_A_var.text()) + int(self.users_B_var.text())
             alpha = self.alpha_slider.value() / 100
             fpr = run_aa_simulation(p, n, alpha)
-            html = f"<pre>Exp FPR: {alpha:.1%}, Actual FPR: {fpr:.1%}</pre>"
+            html = (
+                f"<pre>{self.tr('Exp FPR')}: {alpha:.1%}, "
+                f"{self.tr('Actual FPR')}: {fpr:.1%}</pre>"
+            )
             self.results_text.setHtml(html)
             self._add_history("A/A Test", html)
             self._last_fig = None
@@ -1293,9 +1336,9 @@ class ABTestWindow(QMainWindow):
             alpha = self.alpha_slider.value() / 100
             url = self._config.get("webhook_url") or None
             steps, pa = run_sequential_analysis(ua, ca, ub, cb, alpha, webhook_url=url)
-            txt = f"<pre>Pocock α={pa:.4f}\n"
+            txt = f"<pre>{self.tr('Pocock α')}={pa:.4f}\n"
             for i, r in enumerate(steps, 1):
-                txt += f"Step{i}: p={r['p_value_ab']:.4f}, win={r['winner']}\n"
+                txt += f"{self.tr('Step')}{i}: p={r['p_value_ab']:.4f}, {self.tr('win')}={r['winner']}\n"
             txt += "</pre>"
             self.results_text.setHtml(txt)
             self._add_history("Sequential Analysis", txt)
@@ -1310,11 +1353,12 @@ class ABTestWindow(QMainWindow):
             alpha = self.alpha_slider.value() / 100
             url = self._config.get("webhook_url") or None
             steps = run_obrien_fleming(ua, ca, ub, cb, alpha, webhook_url=url)
-            txt = "<pre>O'Brien-Fleming\n"
+            txt = "<pre>" + self.tr("O'Brien-Fleming") + "\n"
             for i, r in enumerate(steps, 1):
                 txt += (
-                    f"Step{i}: p={r['p_value_ab']:.4f} "
-                    f"thr={r['threshold']:.4f} win={r['winner']}\n"
+                    f"{self.tr('Step')}{i}: p={r['p_value_ab']:.4f} "
+                    f"{self.tr('thr')}={r['threshold']:.4f} "
+                    f"{self.tr('win')}={r['winner']}\n"
                 )
             txt += "</pre>"
             self.results_text.setHtml(txt)
@@ -1332,11 +1376,11 @@ class ABTestWindow(QMainWindow):
             up = self.uplift_slider.value() / 1000
             u, br, nr, pf, ro = calculate_roi(rpu, cost, bud, p1, up)
             html = (
-                f"<pre>Users: {u:.0f}\n"
-                f"Base rev: {br:.2f}\n"
-                f"New rev:  {nr:.2f}\n"
-                f"Profit:   {pf:.2f}\n"
-                f"ROI:      {ro:.2f}%</pre>"
+                f"<pre>{self.tr('Users')}: {u:.0f}\n"
+                f"{self.tr('Base rev')}: {br:.2f}\n"
+                f"{self.tr('New rev')}:  {nr:.2f}\n"
+                f"{self.tr('Profit')}:   {pf:.2f}\n"
+                f"{self.tr('ROI')}:      {ro:.2f}%</pre>"
             )
             self.results_text.setHtml(html)
             self._add_history("ROI", html)
@@ -1364,6 +1408,20 @@ class ABTestWindow(QMainWindow):
             self.theme_button.setText(self.tr("☀"))
             self.is_dark = True
 
+    def toggle_language(self):
+        """Switch between English and Russian translations."""
+        new_lang = "ru" if self.lang == "en" else "en"
+        if self._load_translation(new_lang):
+            self.lang_button.setText("EN" if new_lang == "ru" else "RU")
+            self.retranslateUi()
+
+    def retranslateUi(self):
+        """Update UI texts after language change."""
+        self.menuBar().clear()
+        self._build_menu()
+        self.update_ui_text()
+        self.lang_button.setText("RU" if self.lang == "en" else "EN")
+
     def _on_add_data_source(self):
         dlg = AddDataSourceDialog(self)
         if dlg.exec():
@@ -1381,9 +1439,11 @@ class ABTestWindow(QMainWindow):
         if res:
             data = wiz.data()
             msg = (
-                f"Flag: {data['flag']}\n"
-                f"Metric: {data['primary_metric']}\n"
-                f"Sequential={data['sequential']} CUPED={data['cuped']} SRM={data['srm']}"
+                f"{self.tr('Flag')}: {data['flag']}\n"
+                f"{self.tr('Metric')}: {data['primary_metric']}\n"
+                f"{self.tr('Sequential')}={data['sequential']} "
+                f"{self.tr('CUPED')}={data['cuped']} "
+                f"{self.tr('SRM')}={data['srm']}"
             )
             self.results_text.setHtml(f"<pre>{msg}</pre>")
             self._add_history("Quick AB Test", f"<pre>{msg}</pre>")
@@ -1398,9 +1458,11 @@ class ABTestWindow(QMainWindow):
             "srm": True,
         }
         msg = (
-            f"Flag: {data['flag']}\n"
-            f"Metric: {data['primary_metric']}\n"
-            f"Sequential={data['sequential']} CUPED={data['cuped']} SRM={data['srm']}"
+            f"{self.tr('Flag')}: {data['flag']}\n"
+            f"{self.tr('Metric')}: {data['primary_metric']}\n"
+            f"{self.tr('Sequential')}={data['sequential']} "
+            f"{self.tr('CUPED')}={data['cuped']} "
+            f"{self.tr('SRM')}={data['srm']}"
         )
         self.results_text.setHtml(f"<pre>{msg}</pre>")
         self._add_history("One-click AB", f"<pre>{msg}</pre>")
