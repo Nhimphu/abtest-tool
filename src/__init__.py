@@ -1,3 +1,4 @@
 """abtest-tool package."""
 
-__version__ = "0.1.0"
+# Project version following Semantic Versioning
+__version__ = "1.0.0"
