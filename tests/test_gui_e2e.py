@@ -1,3 +1,4 @@
+import os
 import sys
 from pathlib import Path
 
@@ -5,7 +6,16 @@ import pytest
 
 pytest.importorskip("PyQt6")
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
+
+from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import QTimer
+
+try:  # Skip the entire module if Qt can't initialize (e.g. missing plugins)
+    _app = QApplication.instance() or QApplication([])
+    _app.quit()
+except Exception as exc:
+    pytest.skip(f"Qt unavailable: {exc}", allow_module_level=True)
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))
 
