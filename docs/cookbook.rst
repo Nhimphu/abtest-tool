@@ -17,8 +17,10 @@ Cookbook
 
 .. code-block:: python
 
-   from plots import plot_confidence_intervals
+    from stats.ab_test import run_sequential_analysis
 
-   data_a = [1, 2, 3]
-   data_b = [3, 4, 5]
-   plot_confidence_intervals(data_a, data_b)
+    steps, pocock_alpha = run_sequential_analysis(
+        ua=1000, ca=50, ub=1000, cb=60, alpha=0.05, looks=5
+    )
+    for step in steps:
+        print(step["p_value_ab"])
