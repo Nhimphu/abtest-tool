@@ -1432,15 +1432,49 @@ class ABTestWindow(QMainWindow):
             show_error(self, str(e))
 
     def show_tutorial(self):
-        QMessageBox.information(
-            self,
-            self.tr("Tutorial"),
-            "🔹 Слайдеры CR, uplift, α, power\n"
-            "🔹 Поля A/B/C\n"
-            "🔹 Bayesian с priors\n"
-            "🔹 ROI встроен\n"
-            "🔹 История с экспортом",
+        try:
+            from PyQt6.QtWidgets import QDialog, QVBoxLayout, QTextBrowser, QPushButton
+        except Exception:
+            QMessageBox.information(
+                self,
+                self.tr("Tutorial"),
+                self.tr(
+                    "Use the sliders and fields to configure your A/B test. "
+                    "Check README for full instructions."
+                ),
+            )
+            return
+
+        dlg = QDialog(self)
+        dlg.setWindowTitle(self.tr("Tutorial"))
+        layout = QVBoxLayout(dlg)
+        browser = QTextBrowser()
+        html = (
+            f"<h2>{self.tr('Step 1: select flags and metrics')}</h2>"
+            f"<p>{self.tr('Choose a feature flag and primary metric. Fill group data in the A/B/C fields.')}</p>"
+            f"<img src='resources:tutorial/step_flags.svg' width='500'>"
+            f"<h2>{self.tr('Step 2: launch analysis')}</h2>"
+            f"<p>{self.tr('Run A/B/n or enable sequential, CUPED, SRM and Bayesian options in the Advanced block.')}</p>"
+            f"<img src='resources:tutorial/step_launch.svg' width='500'>"
+            f"<h2>{self.tr('Step 3: read results and history')}</h2>"
+            f"<p>{self.tr('Results appear below with a history table to store previous runs.')}</p>"
+            f"<img src='resources:tutorial/step_results.svg' width='500'>"
+            f"<h2>{self.tr('Step 4: export reports')}</h2>"
+            f"<p>{self.tr('Use the File menu to export PDF, Excel, CSV or notebooks.')}</p>"
+            f"<img src='resources:tutorial/step_export.svg' width='500'>"
+            f"<h2>{self.tr('Step 5: switch theme and language')}</h2>"
+            f"<p>{self.tr('Buttons on the right of the menu bar toggle dark/light mode and translations.')}</p>"
+            f"<img src='resources:tutorial/step_theme.svg' width='500'>"
+            f"<p>{self.tr('Additional tools include ROI calculation and a quick AB wizard.')}</p>"
         )
+        browser.setHtml(html)
+        layout.addWidget(browser)
+        close_btn = QPushButton(self.tr("Close"))
+        if hasattr(close_btn, "clicked"):
+            close_btn.clicked.connect(dlg.accept)  # type: ignore
+        layout.addWidget(close_btn)
+        if hasattr(dlg, "exec"):
+            dlg.exec()
 
     def toggle_theme(self):
         if getattr(self, "is_dark", True):
