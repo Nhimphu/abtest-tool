@@ -2,6 +2,7 @@
 
 try:
     from PyQt6.QtWidgets import (
+        QApplication,
         QWizard,
         QWizardPage,
         QVBoxLayout,
@@ -70,12 +71,13 @@ class QuickABTestWizard(QWizard):
     def __init__(self, parent=None) -> None:
         self.parent = parent
         super().__init__(parent)
-        if parent is not None:
-            try:
-                self.setPalette(parent.palette())
-                self.setStyleSheet(parent.styleSheet())
-            except Exception:
-                pass
+        try:
+            # Synchronize palette and stylesheet so background, text and
+            # input fields follow the selected theme
+            self.setPalette(QApplication.palette())
+            self.setStyleSheet(QApplication.instance().styleSheet())
+        except Exception:
+            pass
         self.setWindowTitle(self.tr("Quick AB Test"))
 
         self.addPage(self._build_flags_page())
