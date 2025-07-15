@@ -11,11 +11,12 @@ from flask_jwt_extended import (
 )
 from flags import FeatureFlagStore
 from prometheus_client import (
+    CollectorRegistry,
     Counter,
     Histogram,
-    generate_latest,
-    CONTENT_TYPE_LATEST,
+    make_wsgi_app,
 )
+from werkzeug.middleware.dispatcher import DispatcherMiddleware
 from metrics import track_time
 
 
@@ -23,6 +24,7 @@ def create_app() -> Flask:
     app = Flask(__name__)
     app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "secret")
     jwt = JWTManager(app)
+    registry = CollectorRegistry()
 
     swaggerui_blueprint = get_swaggerui_blueprint(
         "/docs",
@@ -39,11 +41,17 @@ def create_app() -> Flask:
         "flags_requests_total",
         "Total requests to flags API",
         ["endpoint", "method", "status"],
+        registry=registry,
     )
     REQUEST_LATENCY = Histogram(
         "flags_request_seconds",
         "Request latency for flags API",
         ["endpoint"],
+        registry=registry,
+    )
+
+    app.wsgi_app = DispatcherMiddleware(
+        app.wsgi_app, {"/metrics": make_wsgi_app(registry)}
     )
 
     @app.before_request
@@ -57,9 +65,6 @@ def create_app() -> Flask:
             REQUEST_LATENCY.labels(request.path).observe(time.perf_counter() - g._start_time)
         return response
 
-    @app.route("/metrics")
-    def metrics():
-        return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     @app.post("/login")
     @track_time
