@@ -6,6 +6,7 @@ when a particular connector is used.
 """
 
 from typing import Any, Dict, List
+from utils.connectors import register_connector
 
 
 class BigQueryConnector:
@@ -53,5 +54,8 @@ class RedshiftConnector:
     def close(self) -> None:
         self._conn.close()
 
+
+register_connector("bigquery", BigQueryConnector)
+register_connector("redshift", RedshiftConnector)
 
 __all__ = ["BigQueryConnector", "RedshiftConnector"]
