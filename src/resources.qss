@@ -43,3 +43,9 @@ QMenu {
 QMenu::item:selected {
     background-color: #d0d0d0;
 }
+
+QToolTip {
+    background-color: #ffffe0;
+    color: #000000;
+    border: 1px solid #000;
+}

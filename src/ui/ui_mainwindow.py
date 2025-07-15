@@ -815,13 +815,33 @@ class ABTestWindow(QMainWindow):
         # Левая панель
         left = QVBoxLayout()
         # подписи для слайдеров создаются динамически
-        left.addWidget(with_help_label(self.baseline_label, "Baseline conversion rate"))
+        left.addWidget(
+            with_help_label(
+                self.baseline_label,
+                self.tr("Baseline conversion rate"),
+            )
+        )
         left.addWidget(self.baseline_slider)
-        left.addWidget(with_help_label(self.uplift_label, "Expected uplift of variant"))
+        left.addWidget(
+            with_help_label(
+                self.uplift_label,
+                self.tr("Expected uplift of variant"),
+            )
+        )
         left.addWidget(self.uplift_slider)
-        left.addWidget(with_help_label(self.alpha_label, "Significance level"))
+        left.addWidget(
+            with_help_label(
+                self.alpha_label,
+                self.tr("Significance level"),
+            )
+        )
         left.addWidget(self.alpha_slider)
-        left.addWidget(with_help_label(self.power_label, "Statistical power"))
+        left.addWidget(
+            with_help_label(
+                self.power_label,
+                self.tr("Statistical power"),
+            )
+        )
         left.addWidget(self.power_slider)
         left.addWidget(self.calc_button)
 
@@ -829,14 +849,14 @@ class ABTestWindow(QMainWindow):
             left.addWidget(
                 with_help_label(
                     getattr(self, f"users_{G}_label"),
-                    f"Users in group {G}",
+                    self.tr(f"Users in group {G}"),
                 )
             )
             left.addWidget(getattr(self, f"users_{G}_var"))
             left.addWidget(
                 with_help_label(
                     getattr(self, f"conv_{G}_label"),
-                    f"Conversions in group {G}",
+                    self.tr(f"Conversions in group {G}"),
                 )
             )
         left.addWidget(getattr(self, f"conv_{G}_var"))
@@ -848,10 +868,18 @@ class ABTestWindow(QMainWindow):
 
         alpha_prior_label = QLabel(self.tr("α-prior:"))
         beta_prior_label = QLabel(self.tr("β-prior:"))
-        bandit_help = with_help_label(self.bandit_label, "Bandit strategy")
-        rpu_help = with_help_label(self.revenue_per_user_label, "Revenue per user")
-        cost_help = with_help_label(self.traffic_cost_label, "Traffic cost per user")
-        bud_help = with_help_label(self.budget_label, "Available budget")
+        bandit_help = with_help_label(
+            self.bandit_label, self.tr("Bandit strategy")
+        )
+        rpu_help = with_help_label(
+            self.revenue_per_user_label, self.tr("Revenue per user")
+        )
+        cost_help = with_help_label(
+            self.traffic_cost_label, self.tr("Traffic cost per user")
+        )
+        bud_help = with_help_label(
+            self.budget_label, self.tr("Available budget")
+        )
 
         adv_widgets = [
             alpha_prior_label,
