@@ -1,7 +1,8 @@
 """Minimal Flask API exposing core analysis helpers."""
 
 import os
-from flask import Flask, jsonify, request
+import time
+from flask import Flask, jsonify, request, g
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
@@ -11,12 +12,13 @@ from flask_jwt_extended import (
 )
 from flask_swagger_ui import get_swaggerui_blueprint
 from stats.ab_test import evaluate_abn_test
-from metrics import (
-    REQUEST_COUNTER,
+from prometheus_client import (
+    Counter,
+    Histogram,
     generate_latest,
     CONTENT_TYPE_LATEST,
-    track_time,
 )
+from metrics import track_time
 
 
 def create_app() -> Flask:
@@ -34,9 +36,26 @@ def create_app() -> Flask:
     )
     app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
 
+    REQUEST_COUNTER = Counter(
+        "analysis_requests_total",
+        "Total requests to analysis API",
+        ["endpoint", "method", "status"],
+    )
+    REQUEST_LATENCY = Histogram(
+        "analysis_request_seconds",
+        "Request latency for analysis API",
+        ["endpoint"],
+    )
+
+    @app.before_request
+    def start_timer():
+        g._start_time = time.perf_counter()
+
     @app.after_request
     def record_metrics(response):
         REQUEST_COUNTER.labels(request.path, request.method, response.status_code).inc()
+        if hasattr(g, "_start_time"):
+            REQUEST_LATENCY.labels(request.path).observe(time.perf_counter() - g._start_time)
         return response
 
     @app.route("/metrics")
