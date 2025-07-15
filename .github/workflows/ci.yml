@@ -22,9 +22,13 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y libegl1 libgl1 libxkbcommon0
       - name: Run tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: |
           coverage run -m pytest -q
       - name: Run GUI tests
+        env:
+          QT_QPA_PLATFORM: offscreen
         run: pytest --gui
       - name: Install Qt translation tools
         run: |

@@ -1,6 +1,8 @@
+import os
 import importlib
 import pytest
 
+os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 pytest.importorskip("PyQt6")
 
 from PyQt6.QtCore import Qt, QTimer
