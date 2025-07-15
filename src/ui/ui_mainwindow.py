@@ -4,6 +4,8 @@ import sys
 import sqlite3
 import os
 
+from datetime import datetime
+
 from migrations_runner import run_migrations
 import csv
 from typing import Dict
@@ -50,9 +52,9 @@ except Exception:  # pragma: no cover - optional
 
 
 try:
-    from PyQt6.QtCore import Qt, QDateTime, QEvent, QDir, QTranslator, QLocale
+    from PyQt6.QtCore import Qt, QEvent, QDir, QTranslator, QLocale
 except Exception:  # pragma: no cover - optional
-    from PyQt6.QtCore import Qt, QDateTime  # type: ignore
+    from PyQt6.QtCore import Qt  # type: ignore
 
     class QEvent:
         class Type:
@@ -483,18 +485,33 @@ class ABTestWindow(QMainWindow):
             chk.setCheckState(Qt.CheckState.Unchecked)
             chk.setData(Qt.ItemDataRole.UserRole, rec_id)
             table.setItem(r, 0, chk)
-            table.setItem(r, 1, QTableWidgetItem(ts))
+            try:
+                ts_fmt = datetime.fromisoformat(ts).strftime("%d.%m.%Y %H:%M")
+            except Exception:
+                ts_fmt = ts
+            table.setItem(r, 1, QTableWidgetItem(ts_fmt))
             table.setItem(r, 2, QTableWidgetItem(test))
-            table.setItem(r, 3, QTableWidgetItem(res))
-            pb = self._build_inline_chart(res)
+            try:
+                res_dict = json.loads(res)
+                res_text = ", ".join(f"{k}: {v}" for k, v in res_dict.items())
+            except Exception:
+                res_text = res
+            table.setItem(r, 3, QTableWidgetItem(res_text))
+            pb = self._build_inline_chart(res_text)
             table.setCellWidget(r, 4, pb)
 
     def _add_history(self, name, content):
-        ts = QDateTime.currentDateTime().toString()
+        ts = datetime.now().isoformat(timespec="seconds")
+        if isinstance(content, dict):
+            db_res = json.dumps(content, ensure_ascii=False)
+            display_res = ", ".join(f"{k}: {v}" for k, v in content.items())
+        else:
+            db_res = str(content).replace("<pre>", "").replace("</pre>", "")
+            display_res = db_res
         c = self.conn.cursor()
         c.execute(
             "INSERT INTO history(timestamp,test,result) VALUES(?,?,?)",
-            (ts, name, content.replace("<pre>", "").replace("</pre>", "")),
+            (ts, name, db_res),
         )
         self.conn.commit()
         rec_id = c.lastrowid
@@ -504,12 +521,14 @@ class ABTestWindow(QMainWindow):
         chk.setCheckState(Qt.CheckState.Unchecked)
         chk.setData(Qt.ItemDataRole.UserRole, rec_id)
         self.history_table.setItem(r, 0, chk)
-        self.history_table.setItem(r, 1, QTableWidgetItem(ts))
+        try:
+            ts_fmt = datetime.fromisoformat(ts).strftime("%d.%m.%Y %H:%M")
+        except Exception:
+            ts_fmt = ts
+        self.history_table.setItem(r, 1, QTableWidgetItem(ts_fmt))
         self.history_table.setItem(r, 2, QTableWidgetItem(name))
-        self.history_table.setItem(
-            r, 3, QTableWidgetItem(content.replace("<pre>", "").replace("</pre>", ""))
-        )
-        pb = self._build_inline_chart(content)
+        self.history_table.setItem(r, 3, QTableWidgetItem(display_res))
+        pb = self._build_inline_chart(display_res)
         self.history_table.setCellWidget(r, 4, pb)
 
     def _on_delete_selected(self):
@@ -1262,7 +1281,7 @@ class ABTestWindow(QMainWindow):
                 f"{self.tr('Winner')}: {res['winner']}</pre>"
             )
             self.results_text.setHtml(html)
-            self._add_history("A/B/n Test", html)
+            self._add_history(f"A/B/n ({self.lang})", res)
         except Exception as e:
             show_error(self, str(e))
 
