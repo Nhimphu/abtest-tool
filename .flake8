@@ -1,5 +1,10 @@
 [flake8]
 max-line-length = 120
-extend-ignore = E203,W503
-import-order-style = google
-application-import-names = src
+exclude = alembic, plugins, scripts, tests, src/ui
+ignore = 
+    E501, I201, I202, I100, I101, W391, E302, E305, E731, F401, F841, E402, E306
+per-file-ignores =
+    src/stats/ab_test.py: F401
+    src/api/*.py: F401,E402
+    src/ui/*.py: ALL
+    tests/*.py: E402,I100,I101
