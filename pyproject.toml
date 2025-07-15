@@ -30,6 +30,7 @@ alembic = "1.13.1"
 pytest = "8.1.1"
 coverage = "7.5.0"
 coverage-badge = "1.1.0"
+pytest-qt = "4.4.0"
 
 [tool.poetry.scripts]
 abtest-tool = "main:main"
