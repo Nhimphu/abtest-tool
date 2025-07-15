@@ -1102,8 +1102,12 @@ class ABTestWindow(QMainWindow):
         # Всплывающие подсказки
         p.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.black)
         p.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.black)
-        # Применение
-        QApplication.setPalette(p)
+        # Применение палитры ко всем существующим виджетам
+        app = QApplication.instance()
+        if app:
+            app.setPalette(p)
+            for w in app.allWidgets():
+                w.setPalette(p)
         # Сброс custom stylesheet, если есть
         self.setStyleSheet("")
 
