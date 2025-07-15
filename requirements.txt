@@ -10,6 +10,7 @@ pytz==2025.2
 setuptools==80.9.0
 tzdata==2025.2
 pytest==8.1.1
+pytest-qt==4.4.0
 Flask==3.0.3
 flask-swagger-ui==4.11.1
 Flask-JWT-Extended==4.6.0
