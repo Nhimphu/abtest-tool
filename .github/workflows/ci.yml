@@ -40,6 +40,10 @@ jobs:
             echo "Untranslated strings found"
             exit 1
           fi
+      - name: Build documentation
+        run: |
+          pip install sphinx myst-parser
+          sphinx-build -b html -W docs docs/_build/html
       - name: Smoke tests
         if: github.event_name == 'schedule'
         run: poetry run pytest tests/test_logic.py tests/test_flags.py
