@@ -7,6 +7,7 @@ import sqlite3
 from typing import Any, Dict, List
 
 from migrations_runner import run_migrations
+from utils.config import config
 
 try:
     from PyQt6.QtWidgets import (
@@ -52,10 +53,14 @@ except Exception:  # pragma: no cover - allow running tests without PyQt
             "selectRow": lambda *a, **k: None,
         },
     )
+
     class DummyDt:
         def toString(self) -> str:
             return ""
-    QDateTime = type("QDateTime", (), {"currentDateTime": staticmethod(lambda: DummyDt())})
+
+    QDateTime = type(
+        "QDateTime", (), {"currentDateTime": staticmethod(lambda: DummyDt())}
+    )
     Qt = type("Qt", (), {"ItemDataRole": type("IDR", (), {"UserRole": 0})})
     pyqtSignal = lambda *a, **k: lambda *args, **kw: None
 
@@ -65,9 +70,12 @@ class HistoryPanel(QWidget):
 
     state_loaded = pyqtSignal(dict)
 
-    def __init__(self, conn: sqlite3.Connection | None = None, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, conn: sqlite3.Connection | None = None, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
-        self.conn = conn or sqlite3.connect("history.db")
+        path = config.get("history_db", "history.db")
+        self.conn = conn or sqlite3.connect(path)
         run_migrations(self.conn)
 
         self._states: List[Dict[str, Any]] = []
@@ -105,10 +113,7 @@ class HistoryPanel(QWidget):
         c = self.conn.cursor()
         c.execute("SELECT id, payload, timestamp FROM session_states ORDER BY id")
         rows = c.fetchall()
-        self._states = [
-            {"id": i, "payload": p, "timestamp": ts}
-            for i, p, ts in rows
-        ]
+        self._states = [{"id": i, "payload": p, "timestamp": ts} for i, p, ts in rows]
         if hasattr(self.table, "setRowCount"):
             self.table.setRowCount(0)
         for row in self._states:

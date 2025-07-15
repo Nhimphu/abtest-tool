@@ -4,23 +4,30 @@ import threading
 import sqlite3
 
 from migrations_runner import run_migrations
+from utils.config import config
+
 
 @dataclass
 class FeatureFlag:
     """Represents a single feature flag."""
+
     name: str
     enabled: bool = False
     rollout: float = 100.0  # rollout percentage 0-100
 
+
 class FeatureFlagStore:
     """Thread-safe persistent store for feature flags."""
 
-    def __init__(self, db_path: str = "flags.db"):
+    def __init__(self, db_path: str | None = None):
         self._lock = threading.Lock()
-        run_migrations(db_path)
-        self._conn = sqlite3.connect(db_path, check_same_thread=False)
+        path = db_path or config.get("flags_db", "flags.db")
+        run_migrations(path)
+        self._conn = sqlite3.connect(path, check_same_thread=False)
 
-    def create_flag(self, name: str, enabled: bool = False, rollout: float = 100.0) -> FeatureFlag:
+    def create_flag(
+        self, name: str, enabled: bool = False, rollout: float = 100.0
+    ) -> FeatureFlag:
         with self._lock:
             cur = self._conn.cursor()
             cur.execute("SELECT 1 FROM flags WHERE name=?", (name,))
@@ -35,7 +42,13 @@ class FeatureFlagStore:
             self._conn.commit()
             return FeatureFlag(name=name, enabled=enabled, rollout=rollout)
 
-    def update_flag(self, name: str, *, enabled: Optional[bool] = None, rollout: Optional[float] = None) -> FeatureFlag:
+    def update_flag(
+        self,
+        name: str,
+        *,
+        enabled: Optional[bool] = None,
+        rollout: Optional[float] = None
+    ) -> FeatureFlag:
         with self._lock:
             cur = self._conn.cursor()
             cur.execute("SELECT enabled, rollout FROM flags WHERE name=?", (name,))
@@ -70,7 +83,9 @@ class FeatureFlagStore:
             cur = self._conn.cursor()
             cur.execute("SELECT name, enabled, rollout FROM flags")
             rows = cur.fetchall()
-            return [FeatureFlag(name=r[0], enabled=bool(r[1]), rollout=r[2]) for r in rows]
+            return [
+                FeatureFlag(name=r[0], enabled=bool(r[1]), rollout=r[2]) for r in rows
+            ]
 
     def delete_flag(self, name: str) -> None:
         with self._lock:
