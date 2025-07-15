@@ -5,13 +5,11 @@ GUI-приложение для расчёта sample size, A/B/n анализо
 ```bash
 git clone https://github.com/Nhimphu/abtest-tool.git
 cd abtest-tool
-python -m venv venv
-venv\Scripts\Activate
-pip install -r requirements.txt
-python src/ui/main.py
+poetry install
+poetry run python src/ui/main.py
 
 # Тест
-pytest -q
+poetry run pytest -q
 
 ```
 

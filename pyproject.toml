@@ -1,3 +1,37 @@
+[tool.poetry]
+name = "abtest-tool"
+version = "0.1.0"
+description = "GUI tool for A/B testing and sample size calculations"
+authors = ["Nhimphu <nhimphu@example.com>"]
+readme = "README.md"
+packages = [{ include = "*", from = "src" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+numpy = "2.3.1"
+matplotlib = "3.10.3"
+plotly = "6.2.0"
+pillow = "10.4.0"
+PyQt6 = "6.9.1"
+PyQt6-Qt6 = "6.9.1"
+PyQt6_sip = "13.10.2"
+python-dateutil = "2.9.0.post0"
+pytz = "2025.2"
+setuptools = "80.9.0"
+tzdata = "2025.2"
+Flask = "3.0.3"
+flask-swagger-ui = "4.11.1"
+Flask-JWT-Extended = "4.6.0"
+prometheus-client = "0.20.0"
+SQLAlchemy = "2.0.30"
+alembic = "1.13.1"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "8.1.1"
+
+[tool.poetry.scripts]
+abtest-tool = "cli:main"
+
 [build-system]
-requires = ["setuptools>=61"]
-build-backend = "setuptools.build_meta"
+requires = ["poetry-core>=1.7.0"]
+build-backend = "poetry.core.masonry.api"
