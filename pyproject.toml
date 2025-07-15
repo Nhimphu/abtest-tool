@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "abtest-tool"
-version = "0.1.0"
+version = "1.0.0"
 description = "GUI tool for A/B testing and sample size calculations"
 authors = ["Nhimphu <nhimphu@example.com>"]
 readme = "README.md"
@@ -28,9 +28,11 @@ alembic = "1.13.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.1.1"
+coverage = "7.5.0"
+coverage-badge = "1.1.0"
 
 [tool.poetry.scripts]
-abtest-tool = "cli:main"
+abtest-tool = "main:main"
 
 [build-system]
 requires = ["poetry-core>=1.7.0"]
