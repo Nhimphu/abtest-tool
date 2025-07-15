@@ -21,7 +21,7 @@ jobs:
         run: |
           coverage run -m pytest -q
       - name: Run mypy
-        run: mypy src/
+        run: mypy --config-file mypy.ini src/
       - name: Install Qt translation tools
         run: |
           sudo apt-get update
