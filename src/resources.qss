@@ -49,3 +49,13 @@ QToolTip {
     color: #000000;
     border: 1px solid #000;
 }
+QWidget#resultsPanel {
+    background: white;
+    border: 1px solid #cccccc;
+}
+
+QGroupBox {
+    background: #f9f9f9;
+    border: 1px solid #aaaaaa;
+    margin: 5px;
+}
