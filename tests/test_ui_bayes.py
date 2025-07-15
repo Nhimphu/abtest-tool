@@ -152,11 +152,11 @@ def test_ui_renders_bayes(monkeypatch):
         results_text = types.SimpleNamespace(setHtml=lambda html: called.setdefault('html', html))
         _add_history = lambda *a, **k: None
 
-    monkeypatch.setattr(plugin_loader, 'get_plugin', lambda name: types.SimpleNamespace(bayesian_analysis=lambda *a: (0.6, [], [], [])))
+    monkeypatch.setattr(ui_mainwindow, 'bayesian_analysis', lambda *a, **k: (0.6, [], [], []))
     monkeypatch.setattr(ui_mainwindow, 'plot_bayesian_posterior', lambda *a, **k: 'fig')
     monkeypatch.setattr(ui_mainwindow, 'PlotWindow', lambda *a, **k: types.SimpleNamespace(display_plot=lambda f: called.setdefault('fig', f)))
 
-    ui_mainwindow.ABTestWindow._on_run_bayes(DummyWindow())
+    ui_mainwindow.ABTestWindow._on_bayes(DummyWindow())
 
     assert '60' in called['html']
     assert called['fig'] == 'fig'

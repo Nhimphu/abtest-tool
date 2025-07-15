@@ -678,9 +678,11 @@ class ABTestWindow(QMainWindow):
         self.conf_button.setToolTip(self.tr("Plot confidence intervals"))
         self.conf_button.setStatusTip(self.tr("Plot confidence intervals"))
         self.bayes_button = QPushButton()
-        self.bayes_button.clicked.connect(self._on_run_bayes)
+        self.bayes_button.clicked.connect(self._on_bayes)
         self.bayes_button.setToolTip(self.tr("Run Bayesian analysis"))
         self.bayes_button.setStatusTip(self.tr("Run Bayesian analysis"))
+        if not plugin_loader.get_plugin("bayesian"):
+            self.bayes_button.setEnabled(False)
         self.aa_button = QPushButton()
         self.aa_button.clicked.connect(self._on_run_aa)
         self.aa_button.setToolTip(self.tr("Run A/A simulation"))
@@ -1292,16 +1294,13 @@ class ABTestWindow(QMainWindow):
         except Exception as e:
             show_error(self, str(e))
 
-    def _on_run_bayes(self):
+    def _on_bayes(self):
         try:
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             a0 = self.prior_alpha_spin.value()
             b0 = self.prior_beta_spin.value()
-            plug = plugin_loader.get_plugin("bayesian")
-            if not plug or not hasattr(plug, "bayesian_analysis"):
-                raise ImportError("Bayesian analysis plugin not available")
-            prob, x, pa, pb = plug.bayesian_analysis(a0, b0, ua, ca, ub, cb)
+            prob, x, pa, pb = bayesian_analysis(a0, b0, ua, ca, ub, cb)
             tr = getattr(self, "tr", lambda x: x)
             html = f"<pre>{tr('P(B>A)')} = {prob:.2%}</pre>"
             self.results_text.setHtml(html)
@@ -1311,7 +1310,7 @@ class ABTestWindow(QMainWindow):
             w = PlotWindow(self)
             w.display_plot(fig)
         except Exception as e:
-            show_error(self, str(e))
+            QMessageBox.critical(self, self.tr("Error"), str(e))
 
     def _on_run_aa(self):
         try:

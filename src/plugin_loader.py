@@ -1,5 +1,6 @@
 """Utility to automatically load optional plugins."""
 import importlib
+import logging
 import os
 import sys
 from types import ModuleType
@@ -12,6 +13,7 @@ if ROOT_DIR not in sys.path:
     sys.path.insert(0, ROOT_DIR)
 
 _loaded: Dict[str, ModuleType] = {}
+logger = logging.getLogger(__name__)
 
 
 def load_plugins() -> None:
@@ -27,7 +29,8 @@ def load_plugins() -> None:
             continue
         try:
             mod = importlib.import_module(mod_name)
-        except Exception:
+        except Exception as exc:  # pragma: no cover - optional plugins may fail
+            logger.exception("Failed to import plugin %s", mod_name)
             continue
         _loaded[name] = mod
 
