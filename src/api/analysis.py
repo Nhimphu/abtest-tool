@@ -13,6 +13,7 @@ from flask_jwt_extended import (
 from flask_swagger_ui import get_swaggerui_blueprint
 from stats.ab_test import evaluate_abn_test
 from prometheus_client import (
+    CollectorRegistry,
     Counter,
     Histogram,
     generate_latest,
@@ -36,15 +37,19 @@ def create_app() -> Flask:
     )
     app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
 
+    registry = CollectorRegistry()
+
     REQUEST_COUNTER = Counter(
         "analysis_requests_total",
         "Total requests to analysis API",
         ["endpoint", "method", "status"],
+        registry=registry,
     )
     REQUEST_LATENCY = Histogram(
         "analysis_request_seconds",
         "Request latency for analysis API",
         ["endpoint"],
+        registry=registry,
     )
 
     @app.before_request
@@ -60,7 +65,7 @@ def create_app() -> Flask:
 
     @app.route("/metrics")
     def metrics():
-        return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
+        return generate_latest(registry), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     @app.post("/login")
     @track_time
