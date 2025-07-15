@@ -8,9 +8,10 @@ if __package__ is None:
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from ui.ui_mainwindow import ABTestWindow
+from utils.config import config
 
 
-def main() -> None:
+def main(cfg=config) -> None:
     """Launch the A/B test GUI application."""
     app = QApplication(sys.argv)
 
@@ -24,7 +25,7 @@ def main() -> None:
         translator.load(str(translations_dir / "app_en.qm"))
         app.installTranslator(translator)
 
-    window = ABTestWindow()
+    window = ABTestWindow(cfg)
     # Skip authentication when running locally
     window.show()
     sys.exit(app.exec())

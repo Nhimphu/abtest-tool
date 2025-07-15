@@ -408,12 +408,19 @@ class AddDataSourceDialog:
 
 
 class ABTestWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, cfg=None):
         super().__init__()
 
+        from utils.config import config as _cfg
+
+        self._config = cfg or _cfg
+
         # Начальные настройки темы
-        self.is_dark = True
-        self.apply_dark_theme()
+        self.is_dark = self._config.get("theme", "dark") == "dark"
+        if self.is_dark:
+            self.apply_dark_theme()
+        else:
+            self.apply_light_theme()
 
         self.setWindowTitle(self.tr("Ultimate A/B Testing Tool"))
         self.setGeometry(100, 100, 1000, 800)
@@ -444,7 +451,8 @@ class ABTestWindow(QMainWindow):
     # ————— История (SQLite) —————
 
     def _init_history_db(self):
-        self.conn = sqlite3.connect("history.db")
+        path = self._config.get("history_db", "history.db")
+        self.conn = sqlite3.connect(path)
         run_migrations(self.conn)
 
     def _load_history(self):
@@ -1045,8 +1053,7 @@ class ABTestWindow(QMainWindow):
             self.tr("Expected uplift") + f" {self.uplift_slider.value()/10:.1f}%"
         )
         self.alpha_label.setText(
-            self.tr("Significance level")
-            + f" {self.alpha_slider.value()/100:.2f}"
+            self.tr("Significance level") + f" {self.alpha_slider.value()/100:.2f}"
         )
         self.power_label.setText(
             self.tr("Statistical power") + f" {self.power_slider.value()/100:.2f}"
@@ -1055,12 +1062,8 @@ class ABTestWindow(QMainWindow):
         # Кнопки и поля
         self.calc_button.setText(self.tr("Calculate"))
         for G in ["A", "B", "C"]:
-            getattr(self, f"users_{G}_label").setText(
-                self.tr(f"{G} - Users:")
-            )
-            getattr(self, f"conv_{G}_label").setText(
-                self.tr(f"{G} - Conversions:")
-            )
+            getattr(self, f"users_{G}_label").setText(self.tr(f"{G} - Users:"))
+            getattr(self, f"conv_{G}_label").setText(self.tr(f"{G} - Conversions:"))
         self.analyze_button.setText(self.tr("A/B/n Analysis"))
         self.conf_button.setText(self.tr("Confidence Intervals"))
         self.bayes_button.setText(self.tr("Bayesian Analysis"))
@@ -1288,7 +1291,8 @@ class ABTestWindow(QMainWindow):
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             alpha = self.alpha_slider.value() / 100
-            steps, pa = run_sequential_analysis(ua, ca, ub, cb, alpha)
+            url = self._config.get("webhook_url") or None
+            steps, pa = run_sequential_analysis(ua, ca, ub, cb, alpha, webhook_url=url)
             txt = f"<pre>Pocock α={pa:.4f}\n"
             for i, r in enumerate(steps, 1):
                 txt += f"Step{i}: p={r['p_value_ab']:.4f}, win={r['winner']}\n"
@@ -1304,7 +1308,8 @@ class ABTestWindow(QMainWindow):
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             alpha = self.alpha_slider.value() / 100
-            steps = run_obrien_fleming(ua, ca, ub, cb, alpha)
+            url = self._config.get("webhook_url") or None
+            steps = run_obrien_fleming(ua, ca, ub, cb, alpha, webhook_url=url)
             txt = "<pre>O'Brien-Fleming\n"
             for i, r in enumerate(steps, 1):
                 txt += (

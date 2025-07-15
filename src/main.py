@@ -4,6 +4,7 @@
 import plugin_loader
 
 from ui.main import main
+from utils.config import config
 
 if __name__ == "__main__":
-    main()
+    main(config)
