@@ -5,6 +5,7 @@ import statistics
 import math
 import csv
 import pytest
+import logging
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
@@ -135,6 +136,16 @@ def test_evaluate_abn_test_no_difference():
     res = evaluate_abn_test(1000, 100, 1000, 100, 1000, 100)
     assert not res['significant_ab']
     assert not res['significant_ac']
+
+
+def test_evaluate_abn_test_trivial_logs(caplog):
+    caplog.set_level(logging.INFO)
+    res = evaluate_abn_test(100, 10, 100, 10)
+    assert res['p_value_ab'] == 1.0
+    assert res['uplift_ab'] == 0.0
+    assert not res['significant_ab']
+    assert res['winner'] == 'A'
+    assert any('Trivial A/A case' in r.message for r in caplog.records)
 
 
 def test_evaluate_abn_test_invalid_counts():
