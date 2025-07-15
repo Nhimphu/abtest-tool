@@ -13,30 +13,32 @@ try:
     )
 except Exception:  # pragma: no cover - allow tests without PyQt installed
 
+    from typing import Any
+
     class _Widget:
-        def __init__(self, *a, **k):
+        def __init__(self, *a: Any, **k: Any) -> None:
             self._text = ""
             self._checked = False
 
-        def addItems(self, *a, **k):
+        def addItems(self, *a: Any, **k: Any) -> None:
             pass
 
-        def setPlaceholderText(self, *a, **k):
+        def setPlaceholderText(self, *a: Any, **k: Any) -> None:
             pass
 
-        def setText(self, text=""):
+        def setText(self, text: str = "") -> None:
             self._text = text
 
-        def text(self):
+        def text(self) -> str:
             return self._text
 
-        def currentText(self):
+        def currentText(self) -> str:
             return self._text
 
-        def setChecked(self, val):
+        def setChecked(self, val: bool) -> None:
             self._checked = bool(val)
 
-        def isChecked(self):
+        def isChecked(self) -> bool:
             return self._checked
 
     QWizard = type(

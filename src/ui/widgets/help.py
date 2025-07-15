@@ -3,15 +3,21 @@ try:
     from PyQt6.QtGui import QCursor
     from PyQt6.QtCore import Qt
 except Exception:  # pragma: no cover - allow tests without PyQt installed
+    from typing import Any
+
     class QLabel:
-        def __init__(self, *a, **k):
+        def __init__(self, *a: Any, **k: Any) -> None:
             pass
-        def setText(self, *a, **k):
+
+        def setText(self, *a: Any, **k: Any) -> None:
             pass
-        def setCursor(self, *a, **k):
+
+        def setCursor(self, *a: Any, **k: Any) -> None:
             pass
-        def setToolTip(self, *a, **k):
+
+        def setToolTip(self, *a: Any, **k: Any) -> None:
             pass
+
     QWidget = type("QWidget", (), {"__init__": lambda self, *a, **k: None})
     QHBoxLayout = type(
         "QHBoxLayout",
@@ -23,11 +29,14 @@ except Exception:  # pragma: no cover - allow tests without PyQt installed
             "setContentsMargins": lambda *a, **k: None,
         },
     )
+
     class _Qt:
         class CursorShape:
             PointingHandCursor = 0
+
     Qt = _Qt()
-    def QCursor(*a, **k):
+
+    def QCursor(*a: Any, **k: Any) -> None:
         return None
 
 
@@ -35,7 +44,7 @@ class HelpIcon(QLabel):
     """Small '?' label that shows a tooltip."""
 
     def __init__(self, text: str, parent: QWidget | None = None) -> None:
-        super().__init__('?', parent)
+        super().__init__("?", parent)
         try:
             self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         except Exception:
@@ -52,5 +61,6 @@ def with_help_label(label: QLabel, help_text: str) -> QWidget:
     layout.addWidget(HelpIcon(help_text, container))
     layout.addStretch()
     return container
+
 
 __all__ = ["HelpIcon", "with_help_label"]

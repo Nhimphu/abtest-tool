@@ -1,7 +1,7 @@
 """Minimal Flask API exposing core analysis helpers."""
 
 import os
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 from flask_jwt_extended import (
     JWTManager,
     create_access_token,
@@ -35,17 +35,17 @@ def create_app() -> Flask:
     app.register_blueprint(swaggerui_blueprint, url_prefix="/docs")
 
     @app.after_request
-    def record_metrics(response):
+    def record_metrics(response: Response) -> Response:
         REQUEST_COUNTER.labels(request.path, request.method, response.status_code).inc()
         return response
 
     @app.route("/metrics")
-    def metrics():
+    def metrics() -> tuple[bytes, int, dict[str, str]]:
         return generate_latest(), 200, {"Content-Type": CONTENT_TYPE_LATEST}
 
     @app.post("/login")
     @track_time
-    def login():
+    def login() -> Response:
         data = request.get_json(force=True)
         if data.get("username") == "admin" and data.get("password") == "admin":
             access = create_access_token(identity="admin")
@@ -56,7 +56,7 @@ def create_app() -> Flask:
     @app.post("/refresh")
     @jwt_required(refresh=True)
     @track_time
-    def refresh():
+    def refresh() -> Response:
         identity = get_jwt_identity()
         token = create_access_token(identity=identity)
         return jsonify(access_token=token)
@@ -64,7 +64,7 @@ def create_app() -> Flask:
     @app.route("/abtest", methods=["POST"])
     @jwt_required()
     @track_time
-    def run_abtest():
+    def run_abtest() -> Response:
         data = request.get_json(force=True)
         res = evaluate_abn_test(
             data["users_a"],
@@ -77,7 +77,7 @@ def create_app() -> Flask:
         return jsonify(res)
 
     @app.route("/spec", methods=["GET"])
-    def spec():
+    def spec() -> Response:
         """Return minimal OpenAPI spec."""
         spec = {
             "openapi": "3.0.0",
@@ -117,18 +117,50 @@ def create_app() -> Flask:
             "paths": {
                 "/login": {
                     "post": {
-                        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/Login"}}}},
-                        "responses": {"200": {"description": "Login", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Token"}}}}},
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {"$ref": "#/components/schemas/Login"}
+                                }
+                            }
+                        },
+                        "responses": {
+                            "200": {
+                                "description": "Login",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/Token"}
+                                    }
+                                },
+                            }
+                        },
                     }
                 },
                 "/refresh": {
                     "post": {
-                        "responses": {"200": {"description": "Refresh", "content": {"application/json": {"schema": {"$ref": "#/components/schemas/Token"}}}}}
+                        "responses": {
+                            "200": {
+                                "description": "Refresh",
+                                "content": {
+                                    "application/json": {
+                                        "schema": {"$ref": "#/components/schemas/Token"}
+                                    }
+                                },
+                            }
+                        }
                     }
                 },
                 "/abtest": {
                     "post": {
-                        "requestBody": {"content": {"application/json": {"schema": {"$ref": "#/components/schemas/AbTestRequest"}}}},
+                        "requestBody": {
+                            "content": {
+                                "application/json": {
+                                    "schema": {
+                                        "$ref": "#/components/schemas/AbTestRequest"
+                                    }
+                                }
+                            }
+                        },
                         "responses": {"200": {"description": "AB test result"}},
                     }
                 },
@@ -140,7 +172,7 @@ def create_app() -> Flask:
     return app
 
 
-def main():
+def main() -> None:
     app = create_app()
     port = int(os.environ.get("PORT", "5000"))
     app.run(port=port)
