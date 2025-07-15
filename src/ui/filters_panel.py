@@ -1,6 +1,12 @@
 """UI panel for dataset filtering and live metric updates."""
 
 from typing import Any, Dict, List
+import re
+
+try:  # Optional dependency used for query filtering
+    import pandas as pd  # type: ignore
+except Exception:  # pragma: no cover - allow running without pandas
+    pd = None  # type: ignore
 
 try:
     from PyQt6.QtWidgets import (
@@ -33,14 +39,23 @@ class FiltersPanel(QWidget):
 
         self.device_combo = QComboBox()
         self.country_combo = QComboBox()
-        self.utm_combo = QComboBox()
+        self.utm_edit = QLineEdit()
         self.trait_edit = QLineEdit()
 
-        for combo in (self.device_combo, self.country_combo, self.utm_combo):
+        for combo in (self.device_combo, self.country_combo):
             combo.addItem("")
             combo.setEditable(False)
 
+        self.utm_edit.setPlaceholderText("utm_campaign")
         self.trait_edit.setPlaceholderText("custom trait=value")
+
+        if pd is not None and hasattr(pd, "DataFrame"):
+            try:
+                self._df = pd.DataFrame(records)  # type: ignore[attr-defined]
+            except Exception:  # pragma: no cover - fall back if malformed
+                self._df = None
+        else:  # pragma: no cover - pandas missing
+            self._df = None
 
         self._init_values()
         self._build_ui()
@@ -50,11 +65,8 @@ class FiltersPanel(QWidget):
     def _init_values(self) -> None:
         devices = sorted({r.get("device", "") for r in self._records if r.get("device")})
         countries = sorted({r.get("country", "") for r in self._records if r.get("country")})
-        utms = sorted({r.get("utm", "") for r in self._records if r.get("utm")})
-
         self.device_combo.addItems(devices)
         self.country_combo.addItems(countries)
-        self.utm_combo.addItems(utms)
 
     def _build_ui(self) -> None:
         layout = QVBoxLayout(self)
@@ -70,15 +82,16 @@ class FiltersPanel(QWidget):
 
         layout.addWidget(row("Device", self.device_combo))
         layout.addWidget(row("Country", self.country_combo))
-        layout.addWidget(row("UTM", self.utm_combo))
+        layout.addWidget(row("UTM", self.utm_edit))
         layout.addWidget(row("Trait", self.trait_edit))
 
     def _connect_signals(self) -> None:
-        for combo in (self.device_combo, self.country_combo, self.utm_combo):
+        for combo in (self.device_combo, self.country_combo):
             if hasattr(combo, "currentTextChanged"):
                 combo.currentTextChanged.connect(self._recalculate)  # type: ignore
-        if hasattr(self.trait_edit, "textChanged"):
-            self.trait_edit.textChanged.connect(self._recalculate)  # type: ignore
+        for edit in (self.utm_edit, self.trait_edit):
+            if hasattr(edit, "textChanged"):
+                edit.textChanged.connect(self._recalculate)  # type: ignore
 
     # ----- metric calculations -----
     def _recalculate(self) -> None:
@@ -89,15 +102,41 @@ class FiltersPanel(QWidget):
         country = self.country_combo.currentText()
         if country:
             filters["country"] = country
-        utm = self.utm_combo.currentText()
+        utm = self.utm_edit.text().strip()
         if utm:
             filters["utm"] = utm
         trait_raw = self.trait_edit.text()
         if trait_raw and "=" in trait_raw:
             key, val = trait_raw.split("=", 1)
-            filters[key.strip()] = val.strip()
+            key = key.strip()
+            val = val.strip()
+            if key and val:
+                filters[key] = val
 
-        subset = segment_data(self._records, **filters)
+        subset: List[Dict[str, Any]]
+        if self._df is not None and filters:
+            conditions = []
+            local_vars: Dict[str, Any] = {}
+            for i, (k, v) in enumerate(filters.items()):
+                if k not in self._df.columns:
+                    continue
+                if not re.fullmatch(r"\w+", k):
+                    continue
+                var = f"val{i}"
+                local_vars[var] = v
+                conditions.append(f"`{k}` == @{var}")
+            if conditions:
+                query_str = " and ".join(conditions)
+                try:
+                    df_subset = self._df.query(query_str, local_dict=local_vars)
+                    subset = df_subset.to_dict("records")
+                except Exception:  # pragma: no cover - invalid query
+                    subset = []
+            else:
+                subset = self._records
+        else:
+            subset = segment_data(self._records, **filters)
+
         stats = self._calc_metrics(subset)
         if callable(self.metrics_updated):
             self.metrics_updated.emit(stats)  # type: ignore
