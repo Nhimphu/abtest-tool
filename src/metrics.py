@@ -1,5 +1,12 @@
 try:
-    from prometheus_client import Counter, Histogram, Summary, generate_latest, CONTENT_TYPE_LATEST
+    from prometheus_client import (
+        Counter,
+        Histogram,
+        Summary,
+        generate_latest,
+        CONTENT_TYPE_LATEST,
+        REGISTRY,
+    )
 except Exception:  # pragma: no cover - fallback stub
     class _Timer:
         def __enter__(self):
@@ -21,16 +28,32 @@ except Exception:  # pragma: no cover - fallback stub
     def generate_latest(reg=None):
         return b""
     CONTENT_TYPE_LATEST = "text/plain; version=0.0.4; charset=utf-8"
+    REGISTRY = type("Registry", (), {"_names_to_collectors": {}})()  # dummy
 
 import functools
 
-REQUEST_COUNTER = Counter(
+def _get_or_create(metric_cls, name: str, documentation: str, labelnames: list[str]):
+    """Return existing Prometheus metric or create a new one."""
+    registry = globals().get("REGISTRY")
+    if not registry:
+        return metric_cls(name, documentation, labelnames)
+    try:
+        metric = registry._names_to_collectors.get(name)  # type: ignore[attr-defined]
+        if metric:
+            return metric
+        return metric_cls(name, documentation, labelnames)
+    except Exception:
+        return registry._names_to_collectors.get(name)  # type: ignore[attr-defined]
+
+REQUEST_COUNTER = _get_or_create(
+    Counter,
     "api_requests_total",
     "Total API requests",
     ["endpoint", "method", "status"],
 )
 
-FUNCTION_DURATION = Histogram(
+FUNCTION_DURATION = _get_or_create(
+    Histogram,
     "heavy_function_seconds",
     "Time spent in heavy functions",
     ["function"],
