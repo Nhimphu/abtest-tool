@@ -44,44 +44,57 @@ try:
     from PyQt6.QtGui import QIcon
 except Exception:  # pragma: no cover - optional
 
-    class QIcon:
+    class DummyQIcon:
         def __init__(self, *a: Any, **k: Any) -> None:
             pass
 
+    QIcon = DummyQIcon
 
-try:
+
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
     from PyQt6.QtCore import Qt, QDateTime, QEvent, QDir
-except Exception:  # pragma: no cover - optional
-    from PyQt6.QtCore import Qt, QDateTime  # type: ignore
+else:
+    try:
+        from PyQt6.QtCore import Qt, QDateTime, QEvent as _QEvent, QDir as _QDir
 
-    class QEvent:
-        class Type:
-            FocusIn = 0
-            FocusOut = 1
+        QEvent = _QEvent
+        QDir = _QDir
+    except Exception:  # pragma: no cover - optional
+        from PyQt6.QtCore import Qt, QDateTime  # type: ignore
 
-    class QDir:
-        @staticmethod
-        def addSearchPath(*a: Any, **k: Any) -> None:
-            pass
+        class QEvent:
+            class Type:
+                FocusIn = 0
+                FocusOut = 1
+
+        class QDir:
+            @staticmethod
+            def addSearchPath(*a: Any, **k: Any) -> None:
+                pass
 
 
 from .widgets import with_help_label
 
 from .login import LoginDialog
 
-try:
+if TYPE_CHECKING:
     from PyQt6.QtWidgets import QStatusBar
-except Exception:  # pragma: no cover - optional
+else:
+    try:
+        from PyQt6.QtWidgets import QStatusBar
+    except Exception:  # pragma: no cover - optional
 
-    class QStatusBar:
-        def __init__(self, *a: Any, **k: Any) -> None:
-            pass
+        class QStatusBar:
+            def __init__(self, *a: Any, **k: Any) -> None:
+                pass
 
-        def showMessage(self, *a: Any, **k: Any) -> None:
-            pass
+            def showMessage(self, *a: Any, **k: Any) -> None:
+                pass
 
-        def clearMessage(self) -> None:
-            pass
+            def clearMessage(self) -> None:
+                pass
 
 
 try:  # Optional dependency
@@ -126,6 +139,7 @@ class PlotWindow:
 
     def __init__(self, parent: Any | None = None) -> None:
         self.parent = parent
+        self._view: Any | None
         try:
             from PyQt6.QtWebEngineWidgets import QWebEngineView  # type: ignore
         except Exception:  # pragma: no cover - optional dependency
@@ -147,7 +161,7 @@ class PlotWindow:
         import plotly.io as pio
 
         html = pio.to_html(fig, full_html=False, include_plotlyjs="cdn")
-        if getattr(self, "_view", None):
+        if self._view is not None:
             self._view.setHtml(html)
             self._dialog.exec()
         else:
@@ -187,7 +201,7 @@ class AddDataSourceDialog:
                 def connect(self, *a: Any, **k: Any) -> None:
                     pass
 
-            class QDialogButtonBox:
+            class DummyQDialogButtonBox:
                 class StandardButton:
                     Ok = 1
                     Cancel = 2
@@ -195,6 +209,8 @@ class AddDataSourceDialog:
                 def __init__(self, *a: Any, **k: Any) -> None:
                     self.accepted = DummySig()
                     self.rejected = DummySig()
+
+        QDialogButtonBox = DummyQDialogButtonBox
 
         def _layout_stub(*a: Any, **k: Any) -> Any:
             return type(
@@ -430,9 +446,9 @@ class ABTestWindow(QMainWindow):
         self._load_history()
         # Обновляем тексты
         self.update_ui_text()
-        self.sources = []
-        self.token = None
-        self.refresh_token = None
+        self.sources: list[dict[str, str]] = []
+        self.token: str | None = None
+        self.refresh_token: str | None = None
 
     def closeEvent(self, event: Any) -> None:
         """Ensure database connection is closed on exit."""
@@ -1105,7 +1121,9 @@ class ABTestWindow(QMainWindow):
                 for b in self._auth_buttons:
                     b.setEnabled(True)
 
-    def _request_token(self, username: str, password: str) -> str | None:
+    def _request_token(
+        self, username: str, password: str
+    ) -> tuple[str | None, str | None]:
         data = json.dumps({"username": username, "password": password}).encode()
         api_url = os.environ.get("API_URL", "http://localhost:5000")
         req = urllib.request.Request(

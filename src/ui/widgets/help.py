@@ -1,43 +1,49 @@
-try:
+from typing import Any, TYPE_CHECKING
+
+if TYPE_CHECKING:
     from PyQt6.QtWidgets import QLabel, QWidget, QHBoxLayout
     from PyQt6.QtGui import QCursor
     from PyQt6.QtCore import Qt
-except Exception:  # pragma: no cover - allow tests without PyQt installed
-    from typing import Any
+else:
+    try:
+        from PyQt6.QtWidgets import QLabel, QWidget, QHBoxLayout
+        from PyQt6.QtGui import QCursor
+        from PyQt6.QtCore import Qt
+    except Exception:  # pragma: no cover - allow tests without PyQt installed
 
-    class QLabel:
-        def __init__(self, *a: Any, **k: Any) -> None:
-            pass
+        class QLabel:
+            def __init__(self, *a: Any, **k: Any) -> None:
+                pass
 
-        def setText(self, *a: Any, **k: Any) -> None:
-            pass
+            def setText(self, *a: Any, **k: Any) -> None:
+                pass
 
-        def setCursor(self, *a: Any, **k: Any) -> None:
-            pass
+            def setCursor(self, *a: Any, **k: Any) -> None:
+                pass
 
-        def setToolTip(self, *a: Any, **k: Any) -> None:
-            pass
+            def setToolTip(self, *a: Any, **k: Any) -> None:
+                pass
 
-    QWidget = type("QWidget", (), {"__init__": lambda self, *a, **k: None})
-    QHBoxLayout = type(
-        "QHBoxLayout",
-        (),
-        {
-            "__init__": lambda self, *a, **k: None,
-            "addWidget": lambda *a, **k: None,
-            "addStretch": lambda *a, **k: None,
-            "setContentsMargins": lambda *a, **k: None,
-        },
-    )
+        QWidget = type("QWidget", (), {"__init__": lambda self, *a, **k: None})
+        QHBoxLayout = type(
+            "QHBoxLayout",
+            (),
+            {
+                "__init__": lambda self, *a, **k: None,
+                "addWidget": lambda *a, **k: None,
+                "addStretch": lambda *a, **k: None,
+                "setContentsMargins": lambda *a, **k: None,
+            },
+        )
 
-    class _Qt:
-        class CursorShape:
-            PointingHandCursor = 0
+        class _Qt:
+            class CursorShape:
+                PointingHandCursor = 0
 
-    Qt = _Qt()
+        Qt = _Qt()
 
-    def QCursor(*a: Any, **k: Any) -> None:
-        return None
+        def QCursor(*a: Any, **k: Any) -> None:  # type: ignore
+            return None
 
 
 class HelpIcon(QLabel):

@@ -61,7 +61,7 @@ def export_notebook(sections: Dict[str, Iterable[str]], filepath: str) -> None:
         "Интерпретация": "Interpretation",
     }
 
-    nb = copy.deepcopy(NB_TEMPLATE)
+    nb: Dict[str, Any] = copy.deepcopy(NB_TEMPLATE)
     for cell, key in zip(nb["cells"], order):
         lines = sections.get(key)
         if lines is None:

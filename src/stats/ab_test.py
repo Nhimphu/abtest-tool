@@ -44,7 +44,7 @@ from webhooks import send_webhook
 
 
 @track_time
-def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> int:
+def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> float:
     """Размер выборки на группу (двусторонний тест разности пропорций)."""
     if p1 == p2 or p1 <= 0 or p2 <= 0:
         return float("inf")
@@ -54,7 +54,7 @@ def required_sample_size(p1: float, p2: float, alpha: float, power: float) -> in
     se_pooled = math.sqrt(2 * p_avg * (1 - p_avg))
     se_effect = math.sqrt(p1 * (1 - p1) + p2 * (1 - p2))
     n = ((z_alpha * se_pooled + z_beta * se_effect) ** 2) / ((p1 - p2) ** 2)
-    return max(1, math.ceil(n))
+    return float(max(1, math.ceil(n)))
 
 
 @track_time
@@ -99,7 +99,11 @@ def _evaluate_abn_test(
 
     cr_a = conv_a / users_a
     cr_b = conv_b / users_b
-    cr_c = conv_c / users_c if users_c is not None and conv_c is not None else None
+    cr_c: Optional[float]
+    if users_c is not None and conv_c is not None:
+        cr_c = conv_c / users_c
+    else:
+        cr_c = None
 
     if users_c is not None and conv_c is not None:
         pooled = (conv_a + conv_b + conv_c) / (users_a + users_b + users_c)
@@ -110,7 +114,7 @@ def _evaluate_abn_test(
     z_ab = (cr_b - cr_a) / se_ab if se_ab > 0 else 0
     p_ab = 2 * (1 - norm.cdf(abs(z_ab)))
 
-    if users_c is not None and conv_c is not None:
+    if users_c is not None and conv_c is not None and cr_c is not None:
         se_ac = math.sqrt(pooled * (1 - pooled) * (1 / users_a + 1 / users_c))
         z_ac = (cr_c - cr_a) / se_ac if se_ac > 0 else 0
         p_ac = 2 * (1 - norm.cdf(abs(z_ac)))
@@ -130,6 +134,7 @@ def _evaluate_abn_test(
     uplift_ab = (cr_b - cr_a) / cr_a * 100 if cr_a > 0 else 0
 
     if users_c is not None and conv_c is not None:
+        assert cr_c is not None
         winner = (
             "B"
             if sig_ab and cr_b > cr_a
