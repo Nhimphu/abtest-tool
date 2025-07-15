@@ -1,8 +1,18 @@
 import argparse
 import json
+import logging
+import logging.config
+from pathlib import Path
 from typing import List
 
+try:
+    import yaml
+except Exception:  # pragma: no cover - optional dependency
+    yaml = None  # type: ignore
+
 from stats.ab_test import evaluate_abn_test
+
+logger = logging.getLogger(__name__)
 
 
 def _run_analysis(args: argparse.Namespace) -> None:
@@ -17,13 +27,20 @@ def _run_analysis(args: argparse.Namespace) -> None:
         alpha=data.get("alpha", 0.05),
     )
     if args.output_format == "json":
-        print(json.dumps(res))
+        logger.info(json.dumps(res))
     else:
         for k, v in res.items():
-            print(f"{k}: {v}")
+            logger.info(f"{k}: {v}")
 
 
 def main(argv: List[str] | None = None) -> None:
+    cfg_path = Path(__file__).resolve().parents[1] / "logging.yaml"
+    if cfg_path.exists() and yaml is not None:
+        with cfg_path.open("r", encoding="utf-8") as f:
+            logging.config.dictConfig(yaml.safe_load(f))
+    else:  # pragma: no cover - fallback if yaml not available
+        logging.basicConfig(level=logging.INFO)
+
     parser = argparse.ArgumentParser(prog="abtest-tool")
     subparsers = parser.add_subparsers(dest="command")
 
