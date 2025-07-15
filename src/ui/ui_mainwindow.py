@@ -451,7 +451,7 @@ class ABTestWindow(QMainWindow):
         # Устанавливаем фильтры событий
         self._install_event_filters()
         # Загружаем историю
-        self._load_history()
+        self.load_history()
         # Обновляем тексты
         self.update_ui_text()
         self.sources = []
@@ -472,23 +472,22 @@ class ABTestWindow(QMainWindow):
         self.conn = sqlite3.connect(path)
         run_migrations(self.conn)
 
-    def _load_history(self):
+    def load_history(self):
         c = self.conn.cursor()
         c.execute("SELECT id,timestamp,test,result FROM history ORDER BY id")
         rows = c.fetchall()
-        self.history_table.setRowCount(0)
-        for rec_id, ts, test, res in rows:
-            r = self.history_table.rowCount()
-            self.history_table.insertRow(r)
+        table = self.history_table
+        table.setRowCount(len(rows))
+        for r, (rec_id, ts, test, res) in enumerate(rows):
             chk = QTableWidgetItem()
             chk.setCheckState(Qt.CheckState.Unchecked)
             chk.setData(Qt.ItemDataRole.UserRole, rec_id)
-            self.history_table.setItem(r, 0, chk)
-            self.history_table.setItem(r, 1, QTableWidgetItem(ts))
-            self.history_table.setItem(r, 2, QTableWidgetItem(test))
-            self.history_table.setItem(r, 3, QTableWidgetItem(res))
+            table.setItem(r, 0, chk)
+            table.setItem(r, 1, QTableWidgetItem(ts))
+            table.setItem(r, 2, QTableWidgetItem(test))
+            table.setItem(r, 3, QTableWidgetItem(res))
             pb = self._build_inline_chart(res)
-            self.history_table.setCellWidget(r, 4, pb)
+            table.setCellWidget(r, 4, pb)
 
     def _add_history(self, name, content):
         ts = QDateTime.currentDateTime().toString()
@@ -515,20 +514,23 @@ class ABTestWindow(QMainWindow):
 
     def _on_delete_selected(self):
         """Delete currently selected rows from history."""
-        model = self.history_table.selectionModel()
-        if not model or not model.selectedRows():
-            QMessageBox.warning(self, "Warning", "Nothing selected")
+        rows = self.history_table.selectionModel().selectedRows()
+        if not rows:
+            QMessageBox.warning(self, self.tr("Ошибка"), self.tr("Ничего не выбрано"))
             return
-        rows = sorted((idx.row() for idx in model.selectedRows()), reverse=True)
-        for row in rows:
+        ids = []
+        indexes = sorted((idx.row() for idx in rows), reverse=True)
+        for row in indexes:
             item = self.history_table.item(row, 0)
             if item is not None:
-                rec_id = item.data(Qt.ItemDataRole.UserRole)
-                self.conn.cursor().execute("DELETE FROM history WHERE id=?", (rec_id,))
-        self.conn.commit()
-        for row in rows:
+                ids.append(item.data(Qt.ItemDataRole.UserRole))
+        if ids:
+            c = self.conn.cursor()
+            c.executemany("DELETE FROM history WHERE id=?", [(i,) for i in ids])
+            self.conn.commit()
+        for row in indexes:
             self.history_table.removeRow(row)
-        self._load_history()
+        self.load_history()
 
     def _clear_all_history(self):
         self.conn.cursor().execute("DELETE FROM history")
@@ -868,18 +870,14 @@ class ABTestWindow(QMainWindow):
 
         alpha_prior_label = QLabel(self.tr("α-prior:"))
         beta_prior_label = QLabel(self.tr("β-prior:"))
-        bandit_help = with_help_label(
-            self.bandit_label, self.tr("Bandit strategy")
-        )
+        bandit_help = with_help_label(self.bandit_label, self.tr("Bandit strategy"))
         rpu_help = with_help_label(
             self.revenue_per_user_label, self.tr("Revenue per user")
         )
         cost_help = with_help_label(
             self.traffic_cost_label, self.tr("Traffic cost per user")
         )
-        bud_help = with_help_label(
-            self.budget_label, self.tr("Available budget")
-        )
+        bud_help = with_help_label(self.budget_label, self.tr("Available budget"))
 
         adv_widgets = [
             alpha_prior_label,
