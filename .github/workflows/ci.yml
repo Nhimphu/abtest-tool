@@ -13,6 +13,10 @@ jobs:
         with:
           python-version: '3.11'
       - uses: snok/install-poetry@v1
+      - name: Install Qt dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xvfb libegl1
       - name: Install dependencies
         run: |
           poetry install --no-interaction
@@ -21,8 +25,7 @@ jobs:
           xvfb-run -a poetry run coverage run -m pytest -q
       - name: Install Qt translation tools
         run: |
-          sudo apt-get update
-          sudo apt-get install -y xvfb qt6-tools-dev-tools qttools5-dev-tools
+          sudo apt-get install -y qt6-tools-dev-tools qttools5-dev-tools
           if ! command -v lrelease >/dev/null; then
             # Создаём алиас на lrelease-qt6 или lrelease-qt5
             sudo ln -s $(which lrelease-qt6 || which lrelease-qt5) /usr/local/bin/lrelease
