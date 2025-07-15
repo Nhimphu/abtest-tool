@@ -6,7 +6,10 @@ on:
     - cron: '0 3 * * *'
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-python@v4
@@ -16,13 +19,19 @@ jobs:
       - name: Install dependencies
         run: |
           poetry install --no-interaction
+          pip install flake8 mypy sphinx
+      - name: Run flake8
+        run: poetry run flake8 .
+      - name: Run mypy
+        run: poetry run mypy src tests
       - name: Run unit tests
-        run: |
-          poetry run coverage run -m pytest -q --ignore=tests/test_api_integration.py
+        run: poetry run pytest -q --ignore=tests/test_api_integration.py
       - name: Run integration tests
-        run: |
-          poetry run pytest -q tests/test_api_integration.py
+        run: poetry run pytest -q tests/test_api_integration.py
+      - name: Build docs
+        run: poetry run sphinx-build -M html docs docs/_build
       - name: Install Qt translation tools
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y qt6-tools-dev-tools qttools5-dev-tools
@@ -31,6 +40,7 @@ jobs:
             sudo ln -s $(which lrelease-qt6 || which lrelease-qt5) /usr/local/bin/lrelease
           fi
       - name: Build translations
+        if: runner.os == 'Linux'
         run: |
           poetry run pylupdate6 src/ui/ui_mainwindow.py src/ui/wizard.py src/main.py \
             -ts translations/app_ru.ts
@@ -44,13 +54,13 @@ jobs:
         if: github.event_name == 'schedule'
         run: poetry run pytest tests/test_logic.py tests/test_flags.py
       - name: Generate coverage badge
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && runner.os == 'Linux'
         run: |
           poetry run coverage xml
           poetry run coverage-badge -o coverage.svg -f
 
       - name: Commit coverage badge
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && runner.os == 'Linux'
         uses: actions/github-script@v7
         with:
           script: |
