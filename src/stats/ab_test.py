@@ -2,8 +2,12 @@ import math
 import types
 from typing import List, Optional
 
-from metrics import track_time
-import plugin_loader
+try:
+    from src.metrics import track_time  # when executed as part of package
+    import src.plugin_loader as plugin_loader
+except ModuleNotFoundError:  # fallback for tests adding src to PYTHONPATH
+    from metrics import track_time
+    import plugin_loader
 
 try:
     import numpy as np
@@ -28,7 +32,10 @@ except Exception:
         cdf=staticmethod(lambda x, df: 1 - _math.exp(-x/2))
     norm=_Norm(); beta=_Beta(); chi2=_Chi2()
 
-from webhooks import send_webhook
+try:
+    from src.webhooks import send_webhook
+except ModuleNotFoundError:
+    from webhooks import send_webhook
 
 
 @track_time
