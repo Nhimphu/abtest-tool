@@ -1,6 +1,7 @@
 import math
 import types
 from typing import List, Optional
+import logging
 
 try:
     from src.metrics import track_time  # when executed as part of package
@@ -8,6 +9,8 @@ try:
 except ModuleNotFoundError:  # fallback for tests adding src to PYTHONPATH
     from metrics import track_time
     import plugin_loader
+
+logger = logging.getLogger(__name__)
 
 try:
     import numpy as np
@@ -91,6 +94,30 @@ def _evaluate_abn_test(
     if users_c is not None and conv_c is not None and not (0 <= conv_c <= users_c):
         raise ValueError("Количество конверсий C должно быть от 0 до users_c")
 
+    if (
+        users_c is None
+        and conv_c is None
+        and users_a == users_b
+        and conv_a == conv_b
+    ):
+        cr = conv_a / users_a
+        trivial_result = {
+            "cr_a": cr,
+            "cr_b": cr,
+            "cr_c": None,
+            "uplift_ab": 0.0,
+            "uplift_ac": None,
+            "p_value_ab": 1.0,
+            "p_value_ac": None,
+            "significant_ab": False,
+            "significant_ac": None,
+            "winner": "A",
+            "cohens_h_ab": 0.0,
+            "cohens_h_ac": None,
+        }
+        logger.info("Trivial A/A case detected; returning baseline result")
+        return trivial_result
+
     cr_a = conv_a / users_a
     cr_b = conv_b / users_b
     cr_c = conv_c / users_c if users_c is not None and conv_c is not None else None
@@ -102,11 +129,13 @@ def _evaluate_abn_test(
 
     se_ab = math.sqrt(pooled * (1 - pooled) * (1 / users_a + 1 / users_b))
     z_ab = (cr_b - cr_a) / se_ab if se_ab > 0 else 0
+    z_ab = z_ab.item() if hasattr(z_ab, "item") else z_ab
     p_ab = 2 * (1 - norm.cdf(abs(z_ab)))
 
     if users_c is not None and conv_c is not None:
         se_ac = math.sqrt(pooled * (1 - pooled) * (1 / users_a + 1 / users_c))
         z_ac = (cr_c - cr_a) / se_ac if se_ac > 0 else 0
+        z_ac = z_ac.item() if hasattr(z_ac, "item") else z_ac
         p_ac = 2 * (1 - norm.cdf(abs(z_ac)))
         alpha_adj = alpha / 2
         sig_ac = p_ac < alpha_adj
@@ -284,7 +313,8 @@ def srm_check(users_a: int, users_b: int, alpha: float = 0.05):
     total = users_a + users_b
     expected = total / 2
     chi_sq = ((users_a - expected) ** 2) / expected + ((users_b - expected) ** 2) / expected
-    p = 1 - chi2.cdf(chi_sq, df=1)
+    val = chi_sq.item() if hasattr(chi_sq, "item") else chi_sq
+    p = 1 - chi2.cdf(val, df=1)
     return p < alpha, p
 
 
