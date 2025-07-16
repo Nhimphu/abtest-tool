@@ -1,7 +1,15 @@
 """Optional Bayesian analysis implementation using numpy and scipy."""
 from typing import Tuple
 import numpy as np
-from scipy.stats import beta
+try:  # optional dependency
+    from scipy.stats import beta
+except ModuleNotFoundError:  # pragma: no cover - optional dependency
+    import logging
+
+    logging.warning(
+        "scipy is not installed; the bayesian plugin will be disabled"
+    )
+    raise
 from metrics import track_time
 
 
