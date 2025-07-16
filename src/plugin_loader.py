@@ -30,7 +30,7 @@ def load_plugins() -> None:
         try:
             mod = importlib.import_module(mod_name)
         except Exception as exc:  # pragma: no cover - optional plugins may fail
-            logger.exception("Failed to import plugin %s", mod_name)
+            logger.warning("Failed to import plugin %s: %s", mod_name, exc)
             continue
         _loaded[name] = mod
 
