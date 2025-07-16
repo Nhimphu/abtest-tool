@@ -220,6 +220,39 @@ def evaluate_abn_test(
     alpha: float = 0.05,
 ):
     """A/B/n тест с поправкой FDR (Benjamini–Hochberg)."""
+    if users_a <= 0 or users_b <= 0:
+        raise ValueError("Кол-во пользователей должно быть >0")
+    if users_c is not None and users_c <= 0:
+        raise ValueError("Кол-во пользователей должно быть >0")
+    if not (0 <= conv_a <= users_a):
+        raise ValueError("Количество конверсий A должно быть от 0 до users_a")
+    if not (0 <= conv_b <= users_b):
+        raise ValueError("Количество конверсий B должно быть от 0 до users_b")
+    if users_c is not None and conv_c is not None and not (0 <= conv_c <= users_c):
+        raise ValueError("Количество конверсий C должно быть от 0 до users_c")
+
+    if users_a == users_b and conv_a == conv_b and users_c is None and conv_c is None:
+        logger.info("Trivial A/A case detected; returning baseline result")
+        cr = conv_a / users_a if users_a > 0 else 0.0
+        trivial = {
+            "cr_a": cr,
+            "cr_b": cr,
+            "cr_c": None,
+            "uplift_ab": 0.0,
+            "uplift_ac": None,
+            "p_value_ab": 1.0,
+            "p_value_ac": None,
+            "significant_ab": False,
+            "significant_ac": None,
+            "winner": "A",
+            "cohens_h_ab": 0.0,
+            "cohens_h_ac": None,
+        }
+        m = max(1, int(metrics))
+        p_adj = min(1.0 * m, 1.0)
+        trivial["p_value_fdr"] = p_adj
+        trivial["significant_fdr"] = False
+        return trivial
     res = _evaluate_abn_test(users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha)
     p = res["p_value_ab"]
     m = max(1, int(metrics))
