@@ -15,7 +15,7 @@ jobs:
       - uses: snok/install-poetry@v1
       - name: Install dependencies
         run: |
-          poetry install --no-interaction
+          poetry install --no-interaction --with dev
       - name: Run unit tests
         run: |
           poetry run coverage run -m pytest -q --ignore=tests/test_api_integration.py
