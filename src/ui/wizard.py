@@ -129,50 +129,59 @@ class QuickABTestWizard(QWizard):
     def _build_flags_page(self) -> QWizardPage:
         page = QWizardPage()
         page.setTitle(self.tr("Flags"))
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
+        QVBoxLayout(page)
+        try:
+            page.layout().setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
 
-        layout.addWidget(QLabel(self.tr("Feature Flag")))
+        page.layout().addWidget(QLabel(self.tr("Feature Flag")))
         page.flag_combo = QComboBox()
-        layout.addWidget(page.flag_combo)
+        page.layout().addWidget(page.flag_combo)
 
-        layout.addWidget(QLabel(self.tr("Rollout %")))
+        page.layout().addWidget(QLabel(self.tr("Rollout %")))
         page.rollout_edit = QLineEdit()
         page.rollout_edit.setPlaceholderText("0-100")
-        layout.addWidget(page.rollout_edit)
+        page.layout().addWidget(page.rollout_edit)
 
         return page
 
     def _build_metrics_page(self) -> QWizardPage:
         page = QWizardPage()
         page.setTitle(self.tr("Metrics"))
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
+        QVBoxLayout(page)
+        try:
+            page.layout().setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
 
-        layout.addWidget(QLabel(self.tr("Primary metric")))
+        page.layout().addWidget(QLabel(self.tr("Primary metric")))
         page.primary_edit = QLineEdit()
-        layout.addWidget(page.primary_edit)
+        page.layout().addWidget(page.primary_edit)
 
-        layout.addWidget(QLabel(self.tr("Custom metrics")))
+        page.layout().addWidget(QLabel(self.tr("Custom metrics")))
         page.custom_edit = QLineEdit()
-        layout.addWidget(page.custom_edit)
+        page.layout().addWidget(page.custom_edit)
 
         return page
 
     def _build_options_page(self) -> QWizardPage:
         page = QWizardPage()
         page.setTitle(self.tr("Options"))
-        layout = QVBoxLayout(page)
-        layout.setContentsMargins(0, 0, 0, 0)
+        QVBoxLayout(page)
+        try:
+            page.layout().setContentsMargins(0, 0, 0, 0)
+        except Exception:
+            pass
 
         page.seq_check = QCheckBox(self.tr("Sequential analysis"))
-        layout.addWidget(page.seq_check)
+        page.layout().addWidget(page.seq_check)
 
         page.cuped_check = QCheckBox(self.tr("CUPED adjustment"))
-        layout.addWidget(page.cuped_check)
+        page.layout().addWidget(page.cuped_check)
 
         page.srm_check = QCheckBox(self.tr("SRM check"))
-        layout.addWidget(page.srm_check)
+        page.layout().addWidget(page.srm_check)
 
         return page
 
