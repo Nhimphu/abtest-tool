@@ -78,11 +78,11 @@ class SettingsWidget(QWidget):
         try:
             validate_expression(text)
         except Exception as e:  # ValueError
-            self.metric_edit.setToolTip(str(e))
+            self.metric_edit.setToolTip(self.tr(str(e)))
             if hasattr(QToolTip, "showText"):
                 QToolTip.showText(self.metric_edit.mapToGlobal(self.metric_edit.rect().bottomLeft()), str(e))
         else:
-            self.metric_edit.setToolTip("")
+            self.metric_edit.setToolTip(self.tr(""))
             if callable(self.metric_changed):
                 self.metric_changed.emit(text)  # type: ignore
 
