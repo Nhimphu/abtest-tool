@@ -1122,7 +1122,9 @@ class ABTestWindow(QMainWindow):
         qm_path = translations_dir / f"app_{lang}.qm"
         if not os.path.isfile(qm_path):
             logging.getLogger(__name__).error("Translation file not found: %s", qm_path)
-            QMessageBox.warning(self, self.tr("Перевод"), self.tr("Файл перевода не найден"))
+            QMessageBox.warning(
+                self, self.tr("Перевод"), self.tr("Файл перевода не найден")
+            )
             return False
         app = QApplication.instance()
         if hasattr(self, "translator"):
@@ -1130,7 +1132,9 @@ class ABTestWindow(QMainWindow):
         self.translator = QTranslator()
         if not self.translator.load(str(qm_path)):
             logging.getLogger(__name__).error("Failed to load translation: %s", qm_path)
-            QMessageBox.warning(self, self.tr("Перевод"), self.tr("Файл перевода не найден"))
+            QMessageBox.warning(
+                self, self.tr("Перевод"), self.tr("Файл перевода не найден")
+            )
             return False
         app.installTranslator(self.translator)
         self.lang = lang
@@ -1469,22 +1473,17 @@ class ABTestWindow(QMainWindow):
         layout = QVBoxLayout(dlg)
         browser = QTextBrowser()
         html = (
-            f"<h2>{self.tr('Step 1: select flags and metrics')}</h2>"
-            f"<p>{self.tr('Choose a feature flag and primary metric. Fill group data in the A/B/C fields.')}</p>"
-            f"<img src='resources:tutorial/step_flags.svg' width='500'>"
-            f"<h2>{self.tr('Step 2: launch analysis')}</h2>"
-            f"<p>{self.tr('Run A/B/n or enable sequential, CUPED, SRM and Bayesian options in the Advanced block.')}</p>"
-            f"<img src='resources:tutorial/step_launch.svg' width='500'>"
-            f"<h2>{self.tr('Step 3: read results and history')}</h2>"
-            f"<p>{self.tr('Results appear below with a history table to store previous runs.')}</p>"
-            f"<img src='resources:tutorial/step_results.svg' width='500'>"
-            f"<h2>{self.tr('Step 4: export reports')}</h2>"
-            f"<p>{self.tr('Use the File menu to export PDF, Excel, CSV or notebooks.')}</p>"
-            f"<img src='resources:tutorial/step_export.svg' width='500'>"
-            f"<h2>{self.tr('Step 5: switch theme and language')}</h2>"
-            f"<p>{self.tr('Buttons on the right of the menu bar toggle dark/light mode and translations.')}</p>"
-            f"<img src='resources:tutorial/step_theme.svg' width='500'>"
-            f"<p>{self.tr('Additional tools include ROI calculation and a quick AB wizard.')}</p>"
+            f"<h2>{self.tr('Quickstart')}</h2>"
+            "<ol>"
+            f"<li>{self.tr('Выберите фиче-флаг и группы A/B/n')}<br>"
+            "<img src='resources:tutorial/step_flags.svg' width='450'></li>"
+            f"<li>{self.tr('Запустите анализ и дождитесь результатов')}<br>"
+            "<img src='resources:tutorial/step_launch.svg' width='450'></li>"
+            f"<li>{self.tr('Изучите метрики и историю запусков')}<br>"
+            "<img src='resources:tutorial/step_results.svg' width='450'></li>"
+            f"<li>{self.tr('Экспортируйте отчет в PDF, Notebook или Markdown')}<br>"
+            "<img src='resources:tutorial/step_export.svg' width='450'></li>"
+            "</ol>"
         )
         browser.setHtml(html)
         layout.addWidget(browser)
