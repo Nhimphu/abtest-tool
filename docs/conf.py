@@ -12,6 +12,12 @@ extensions = [
     'myst_parser',
 ]
 
+# Allow including Markdown files and parsing ``include`` directives correctly
+source_suffix = {
+    '.rst': 'restructuredtext',
+    '.md': 'markdown',
+}
+
 # Mock heavy optional dependencies so autodoc can run without them
 autodoc_mock_imports = ['scipy']
 
