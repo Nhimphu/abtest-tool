@@ -436,11 +436,8 @@ class ABTestWindow(QMainWindow):
             QApplication.instance().installTranslator(self.translator)
 
         # Начальные настройки темы
-        self.is_dark = self._config.get("theme", "dark") == "dark"
-        if self.is_dark:
-            self.apply_dark_theme()
-        else:
-            self.apply_light_theme()
+        self.is_dark = True
+        self.apply_dark_theme()
 
         self.setWindowTitle(self.tr("Ultimate A/B Testing Tool"))
         self.setGeometry(100, 100, 1000, 800)
@@ -1112,12 +1109,10 @@ class ABTestWindow(QMainWindow):
         # Всплывающие подсказки
         p.setColor(QPalette.ColorRole.ToolTipBase, Qt.GlobalColor.black)
         p.setColor(QPalette.ColorRole.ToolTipText, Qt.GlobalColor.black)
-        # Применение палитры ко всем существующим виджетам
+        # Применение палитры ко всему приложению
         app = QApplication.instance()
         if app:
             app.setPalette(p)
-            for w in app.allWidgets():
-                w.setPalette(p)
         # Сброс custom stylesheet, если есть
         self.setStyleSheet("")
 
@@ -1501,14 +1496,14 @@ class ABTestWindow(QMainWindow):
             dlg.exec()
 
     def toggle_theme(self):
-        if getattr(self, "is_dark", True):
+        if self.is_dark:
             self.apply_light_theme()
-            self.theme_button.setText(self.tr("☾"))
             self.is_dark = False
+            self.theme_button.setText(self.tr("☾"))
         else:
             self.apply_dark_theme()
-            self.theme_button.setText(self.tr("☀"))
             self.is_dark = True
+            self.theme_button.setText(self.tr("☀"))
 
     def toggle_language(self):
         """Switch between English and Russian translations."""
