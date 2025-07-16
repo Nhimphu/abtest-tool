@@ -20,8 +20,23 @@ try:
     from PyQt6.QtCore import pyqtSignal
 except Exception:  # pragma: no cover - allow running tests without PyQt
     QWidget = type("QWidget", (), {})
-    QVBoxLayout = QHBoxLayout = type("Layout", (), {"addWidget": lambda *a, **k: None, "setContentsMargins": lambda *a, **k: None})
-    QLabel = QComboBox = QLineEdit = type("Widget", (), {"currentText": lambda self: "", "text": lambda self: "", "addItem": lambda *a, **k: None, "addItems": lambda *a, **k: None, "setPlaceholderText": lambda *a, **k: None, "setEditable": lambda *a, **k: None})
+    QVBoxLayout = QHBoxLayout = type(
+        "Layout",
+        (),
+        {"addWidget": lambda *a, **k: None, "setContentsMargins": lambda *a, **k: None},
+    )
+    QLabel = QComboBox = QLineEdit = type(
+        "Widget",
+        (),
+        {
+            "currentText": lambda self: "",
+            "text": lambda self: "",
+            "addItem": lambda *a, **k: None,
+            "addItems": lambda *a, **k: None,
+            "setPlaceholderText": lambda *a, **k: None,
+            "setEditable": lambda *a, **k: None,
+        },
+    )
     pyqtSignal = lambda *a, **k: None
 
 from stats.ab_test import evaluate_abn_test
@@ -33,7 +48,9 @@ class FiltersPanel(QWidget):
 
     metrics_updated = pyqtSignal(dict)
 
-    def __init__(self, records: List[Dict[str, Any]], parent: QWidget | None = None) -> None:
+    def __init__(
+        self, records: List[Dict[str, Any]], parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self._records = records
 
@@ -63,8 +80,12 @@ class FiltersPanel(QWidget):
         self._recalculate()
 
     def _init_values(self) -> None:
-        devices = sorted({r.get("device", "") for r in self._records if r.get("device")})
-        countries = sorted({r.get("country", "") for r in self._records if r.get("country")})
+        devices = sorted(
+            {r.get("device", "") for r in self._records if r.get("device")}
+        )
+        countries = sorted(
+            {r.get("country", "") for r in self._records if r.get("country")}
+        )
         self.device_combo.addItems(devices)
         self.country_combo.addItems(countries)
 
@@ -93,6 +114,36 @@ class FiltersPanel(QWidget):
             if hasattr(edit, "textChanged"):
                 edit.textChanged.connect(self._recalculate)  # type: ignore
 
+    def _apply_df_filters(self, filters: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Return ``records`` subset using ``pandas.DataFrame.query``."""
+
+        if self._df is None or not filters:
+            return self._records
+
+        conditions = []
+        local_vars: Dict[str, Any] = {}
+        for i, (key, value) in enumerate(filters.items()):
+            if key not in self._df.columns:
+                continue
+            if not re.fullmatch(r"\w+", key):
+                continue
+            if isinstance(value, str) and re.search(r"[\"';]", value):
+                # basic sanitation for unsafe characters
+                continue
+            var = f"val{i}"
+            local_vars[var] = value
+            conditions.append(f"`{key}` == @{var}")
+
+        if not conditions:
+            return self._records
+
+        query_str = " and ".join(conditions)
+        try:
+            df_subset = self._df.query(query_str, local_dict=local_vars)
+        except Exception:  # pragma: no cover - invalid query
+            return []
+        return df_subset.to_dict("records")
+
     # ----- metric calculations -----
     def _recalculate(self) -> None:
         filters: Dict[str, Any] = {}
@@ -113,27 +164,8 @@ class FiltersPanel(QWidget):
             if key and val:
                 filters[key] = val
 
-        subset: List[Dict[str, Any]]
-        if self._df is not None and filters:
-            conditions = []
-            local_vars: Dict[str, Any] = {}
-            for i, (k, v) in enumerate(filters.items()):
-                if k not in self._df.columns:
-                    continue
-                if not re.fullmatch(r"\w+", k):
-                    continue
-                var = f"val{i}"
-                local_vars[var] = v
-                conditions.append(f"`{k}` == @{var}")
-            if conditions:
-                query_str = " and ".join(conditions)
-                try:
-                    df_subset = self._df.query(query_str, local_dict=local_vars)
-                    subset = df_subset.to_dict("records")
-                except Exception:  # pragma: no cover - invalid query
-                    subset = []
-            else:
-                subset = self._records
+        if self._df is not None:
+            subset = self._apply_df_filters(filters)
         else:
             subset = segment_data(self._records, **filters)
 
@@ -158,5 +190,7 @@ class FiltersPanel(QWidget):
                 "significant_ab": False,
                 "winner": "",
             }
-        res.update({"users_a": users_a, "users_b": users_b, "conv_a": conv_a, "conv_b": conv_b})
+        res.update(
+            {"users_a": users_a, "users_b": users_b, "conv_a": conv_a, "conv_b": conv_b}
+        )
         return res
