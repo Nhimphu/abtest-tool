@@ -704,6 +704,7 @@ class ABTestWindow(QMainWindow):
         self.bayes_button.setStatusTip(self.tr("Run Bayesian analysis"))
         if not plugin_loader.get_plugin("bayesian"):
             self.bayes_button.setEnabled(False)
+            self.bayes_button.setToolTip(self.tr("Bayesian plugin not available"))
         self.aa_button = QPushButton()
         self.aa_button.clicked.connect(self._on_run_aa)
         self.aa_button.setToolTip(self.tr("Run A/A simulation"))
@@ -1349,7 +1350,11 @@ class ABTestWindow(QMainWindow):
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             a0 = self.prior_alpha_spin.value()
             b0 = self.prior_beta_spin.value()
-            prob, x, pa, pb = bayesian_analysis(a0, b0, ua, ca, ub, cb)
+            try:
+                prob, x, pa, pb = bayesian_analysis(a0, b0, ua, ca, ub, cb)
+            except Exception as e:
+                QMessageBox.critical(self, self.tr("Bayes Error"), str(e))
+                return
             tr = getattr(self, "tr", lambda x: x)
             html = f"<pre>{tr('P(B>A)')} = {prob:.2%}</pre>"
             self.results_text.setHtml(html)
