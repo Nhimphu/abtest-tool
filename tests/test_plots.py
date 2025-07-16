@@ -13,7 +13,6 @@ if "plugin_loader" not in sys.modules:
     pl.load_plugins = lambda: None
     pl.get_plugin = lambda name: None
     sys.modules["plugin_loader"] = pl
-    sys.modules["src.plugin_loader"] = pl
 
 if "numpy" not in sys.modules:
     np_mod = types.ModuleType("numpy")

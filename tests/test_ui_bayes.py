@@ -118,6 +118,8 @@ sys.modules['PyQt6.QtCore'] = core_mod
 import plugin_loader
 importlib.reload(plugin_loader)
 
+if 'plugins.bayesian' in sys.modules:
+    importlib.reload(sys.modules['plugins.bayesian'])
 from plugins import bayesian
 from ui import ui_mainwindow
 
