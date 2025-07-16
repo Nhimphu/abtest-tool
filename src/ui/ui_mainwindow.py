@@ -3,6 +3,7 @@
 import sys
 import sqlite3
 import os
+import logging
 
 from datetime import datetime
 
@@ -1038,6 +1039,14 @@ class ABTestWindow(QMainWindow):
         tut.triggered.connect(self.show_tutorial)
         hm.addAction(tut)
 
+        lang_menu = mb.addMenu(self.tr("Language"))
+        en_act = QAction(self.tr("English"), self)
+        en_act.triggered.connect(lambda: self.set_language("en"))
+        ru_act = QAction(self.tr("Русский"), self)
+        ru_act.triggered.connect(lambda: self.set_language("ru"))
+        lang_menu.addAction(en_act)
+        lang_menu.addAction(ru_act)
+
         # Language & theme switch
         cw = QWidget()
         cl = QHBoxLayout(cw)
@@ -1116,15 +1125,17 @@ class ABTestWindow(QMainWindow):
         """Load Qt translation for the given language."""
         translations_dir = Path(__file__).resolve().parents[1] / "translations"
         qm_path = translations_dir / f"app_{lang}.qm"
-        if not qm_path.exists():
-            QMessageBox.critical(self, "Error", f"{qm_path} not found")
+        if not os.path.isfile(qm_path):
+            logging.getLogger(__name__).error("Translation file not found: %s", qm_path)
+            QMessageBox.warning(self, self.tr("Перевод"), self.tr("Файл перевода не найден"))
             return False
         app = QApplication.instance()
         if hasattr(self, "translator"):
             app.removeTranslator(self.translator)
         self.translator = QTranslator()
         if not self.translator.load(str(qm_path)):
-            QMessageBox.critical(self, "Error", f"Failed to load {qm_path}")
+            logging.getLogger(__name__).error("Failed to load translation: %s", qm_path)
+            QMessageBox.warning(self, self.tr("Перевод"), self.tr("Файл перевода не найден"))
             return False
         app.installTranslator(self.translator)
         self.lang = lang
@@ -1175,6 +1186,10 @@ class ABTestWindow(QMainWindow):
         self.save_plot_button.setText(self.tr("Save Plot"))
         self.delete_button.setText(self.tr("Delete Selected"))
         self.clear_history_button.setText(self.tr("Clear All"))
+
+    def show_results(self, text: str) -> None:
+        """Display analysis results."""
+        self.results_text.setHtml(self.tr(text))
 
     # ----- auth -----
     def authenticate(self):
@@ -1498,8 +1513,12 @@ class ABTestWindow(QMainWindow):
     def toggle_language(self):
         """Switch between English and Russian translations."""
         new_lang = "ru" if self.lang == "en" else "en"
-        if self._load_translation(new_lang):
-            self.lang_button.setText("EN" if new_lang == "ru" else "RU")
+        self.set_language(new_lang)
+
+    def set_language(self, lang: str) -> None:
+        """Set application language and retranslate UI."""
+        if self._load_translation(lang):
+            self.lang_button.setText("EN" if lang == "ru" else "RU")
             self.retranslateUi()
 
     def retranslateUi(self):
@@ -1532,7 +1551,7 @@ class ABTestWindow(QMainWindow):
                 f"{self.tr('CUPED')}={data['cuped']} "
                 f"{self.tr('SRM')}={data['srm']}"
             )
-            self.results_text.setHtml(f"<pre>{msg}</pre>")
+            self.show_results(f"<pre>{msg}</pre>")
             self._add_history("Quick AB Test", f"<pre>{msg}</pre>")
 
     def _run_one_click_ab(self):
@@ -1551,7 +1570,7 @@ class ABTestWindow(QMainWindow):
             f"{self.tr('CUPED')}={data['cuped']} "
             f"{self.tr('SRM')}={data['srm']}"
         )
-        self.results_text.setHtml(f"<pre>{msg}</pre>")
+        self.show_results(f"<pre>{msg}</pre>")
         self._add_history("One-click AB", f"<pre>{msg}</pre>")
 
     # ————— Сессионные функции и экспорт результатов —————
