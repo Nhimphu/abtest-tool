@@ -114,7 +114,9 @@ def load_from_redshift(sql: str) -> List[Dict[str, Any]]:
     try:
         if not all([host, database, user, password]):
             raise ValueError("Redshift credentials not provided")
-        conn = RedshiftConnector(host=host, port=port, database=database, user=user, password=password)
+        conn = RedshiftConnector(
+            host=host, port=port, database=database, user=user, password=password
+        )
         rows = conn.query(sql)
         if hasattr(conn, "close"):
             conn.close()
@@ -131,5 +133,3 @@ __all__ = [
     "load_from_bigquery",
     "load_from_redshift",
 ]
-
-
