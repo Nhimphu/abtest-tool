@@ -40,7 +40,7 @@ class HelpIcon(QLabel):
             self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         except Exception:
             pass
-        self.setToolTip(text)
+        self.setToolTip(self.tr(text))
 
 
 def with_help_label(label: QLabel, help_text: str) -> QWidget:
