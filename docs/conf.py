@@ -12,6 +12,9 @@ extensions = [
     'myst_parser',
 ]
 
+# Mock heavy optional dependencies so autodoc can run without them
+autodoc_mock_imports = ['scipy']
+
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
