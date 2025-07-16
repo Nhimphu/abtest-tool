@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "abtest-tool"
-version = "1.0.1"
+version = "1.0.0"
 description = "GUI tool for A/B testing and sample size calculations"
 authors = ["Nhimphu <nhimphu@example.com>"]
 readme = "README.md"
