@@ -22,8 +22,13 @@ def main(cfg=config) -> None:
     """Launch the A/B test GUI application."""
     cfg_path = Path(__file__).resolve().parents[1] / "logging.yaml"
     if cfg_path.exists() and yaml is not None:
+        root = logging.getLogger()
+        existing = list(root.handlers)
         with cfg_path.open("r", encoding="utf-8") as f:
             logging.config.dictConfig(yaml.safe_load(f))
+        for h in existing:
+            if h not in root.handlers:
+                root.addHandler(h)
     else:  # pragma: no cover - fallback if yaml not available
         logging.basicConfig(level=logging.INFO)
     logger = logging.getLogger(__name__)
