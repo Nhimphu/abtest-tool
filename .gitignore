@@ -21,3 +21,5 @@ Thumbs.db
 
 history.db
 src/history.db
+
+docs/_build/

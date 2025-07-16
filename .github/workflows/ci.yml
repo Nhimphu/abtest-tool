@@ -15,7 +15,7 @@ jobs:
       - uses: snok/install-poetry@v1
       - name: Install dependencies
         run: |
-          poetry install --no-interaction
+          poetry install --no-interaction --with dev
       - name: Run unit tests
         run: |
           poetry run coverage run -m pytest -q --ignore=tests/test_api_integration.py
@@ -40,6 +40,9 @@ jobs:
             echo "Untranslated strings found"
             exit 1
           fi
+      - name: Build documentation
+        run: |
+          poetry run sphinx-build -b html -W docs docs/_build/html
       - name: Smoke tests
         if: github.event_name == 'schedule'
         run: poetry run pytest tests/test_logic.py tests/test_flags.py
