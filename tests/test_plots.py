@@ -102,7 +102,7 @@ def test_plot_alpha_spending_png(tmp_path):
     fig.write_image(str(path))
     assert path.exists() and path.stat().st_size > 0
     assert len(fig.data) == 2
-    assert all(len(t.x) == 4 for t in fig.data)
+    assert all(len(t.x) == 4 and len(t.y) == 4 for t in fig.data)
 
 
 def test_plot_confidence_intervals_png(tmp_path):
@@ -111,7 +111,7 @@ def test_plot_confidence_intervals_png(tmp_path):
     fig.write_image(str(path))
     assert path.exists() and path.stat().st_size > 0
     assert len(fig.data) == 2
-    assert all(len(t.x) == 2 for t in fig.data)
+    assert all(len(t.x) == 2 and len(t.y) == 2 for t in fig.data)
 
 
 def test_plot_power_curve_png(tmp_path):
@@ -120,4 +120,4 @@ def test_plot_power_curve_png(tmp_path):
     fig.write_image(str(path))
     assert path.exists() and path.stat().st_size > 0
     assert len(fig.data) == 1
-    assert len(fig.data[0].x) == 100
+    assert len(fig.data[0].x) == 100 and len(fig.data[0].y) == 100
