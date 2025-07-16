@@ -162,20 +162,21 @@ def _evaluate_abn_test(
     else:
         winner = "B" if sig_ab and cr_b > cr_a else "A" if not sig_ab else "None"
 
-    return {
-        "cr_a": cr_a,
-        "cr_b": cr_b,
-        "cr_c": cr_c,
-        "uplift_ab": uplift_ab,
-        "uplift_ac": uplift_ac,
-        "p_value_ab": p_ab,
-        "p_value_ac": p_ac,
-        "significant_ab": sig_ab,
-        "significant_ac": sig_ac,
+    res = {
+        "cr_a": float(cr_a),
+        "cr_b": float(cr_b),
+        "cr_c": float(cr_c) if cr_c is not None else None,
+        "uplift_ab": float(uplift_ab),
+        "uplift_ac": float(uplift_ac) if uplift_ac is not None else None,
+        "p_value_ab": float(p_ab),
+        "p_value_ac": float(p_ac) if p_ac is not None else None,
+        "significant_ab": bool(sig_ab),
+        "significant_ac": bool(sig_ac) if sig_ac is not None else None,
         "winner": winner,
-        "cohens_h_ab": h_ab,
-        "cohens_h_ac": h_ac,
+        "cohens_h_ab": float(h_ab),
+        "cohens_h_ac": float(h_ac) if h_ac is not None else None,
     }
+    return res
 
 
 _bayes_plug = plugin_loader.get_plugin("bayesian")
