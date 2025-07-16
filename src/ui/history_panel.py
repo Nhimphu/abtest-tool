@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+from datetime import datetime
 from typing import Any, Dict, List
 
 from migrations_runner import run_migrations
@@ -47,6 +48,13 @@ except Exception:  # pragma: no cover - allow running tests without PyQt
             "insertRow": lambda *a, **k: None,
             "setItem": lambda *a, **k: None,
             "setCellWidget": lambda *a, **k: None,
+            "removeRow": lambda *a, **k: None,
+            "item": lambda *a, **k: None,
+            "selectionModel": lambda self: type(
+                "SelModel",
+                (),
+                {"selectedRows": lambda *a, **k: []},
+            )(),
             "setRowCount": lambda *a, **k: None,
             "rowCount": lambda *a, **k: 0,
             "currentRow": lambda *a, **k: 0,
@@ -84,9 +92,10 @@ class HistoryPanel(QWidget):
         self.undo_button = QPushButton("Undo")
         self.redo_button = QPushButton("Redo")
         self.share_button = QPushButton("Share")
-        self.table = QTableWidget(0, 1)
+        self.delete_button = QPushButton("Delete selected")
+        self.table = QTableWidget(0, 3)
         if hasattr(self.table, "setHorizontalHeaderLabels"):
-            self.table.setHorizontalHeaderLabels(["Timestamp"])
+            self.table.setHorizontalHeaderLabels(["Timestamp", "Test", "Result"])
         if hasattr(self.table, "setSortingEnabled"):
             self.table.setSortingEnabled(True)
 
@@ -96,16 +105,20 @@ class HistoryPanel(QWidget):
             self.redo_button.clicked.connect(self.redo_state)  # type: ignore
         if hasattr(self.share_button, "clicked"):
             self.share_button.clicked.connect(self.share_state)  # type: ignore
+        if hasattr(self.delete_button, "clicked"):
+            self.delete_button.clicked.connect(self._on_delete_selected)  # type: ignore
 
         layout = QVBoxLayout(self)
         hl = QHBoxLayout()
         hl.addWidget(self.undo_button)
         hl.addWidget(self.redo_button)
         hl.addWidget(self.share_button)
+        hl.addWidget(self.delete_button)
         layout.addLayout(hl)
         layout.addWidget(self.table)
 
         self.load_states()
+        self.load_history()
 
     # ----- database -----
 
@@ -126,6 +139,33 @@ class HistoryPanel(QWidget):
                 self.table.setItem(r, 0, item)
         if self._states:
             self._load_state(len(self._states) - 1)
+
+    def load_history(self) -> None:
+        """Load analysis history table."""
+        c = self.conn.cursor()
+        c.execute("SELECT id, timestamp, test, result FROM history ORDER BY id")
+        rows = c.fetchall()
+        if hasattr(self.table, "setRowCount"):
+            self.table.setRowCount(0)
+        for rec_id, ts, test_name, res in rows:
+            if hasattr(self.table, "insertRow"):
+                r = self.table.rowCount()
+                self.table.insertRow(r)
+                try:
+                    ts_fmt = datetime.fromisoformat(ts).strftime("%d.%m.%Y %H:%M")
+                except Exception:
+                    ts_fmt = ts
+                item_ts = QTableWidgetItem(ts_fmt)
+                if hasattr(item_ts, "setData"):
+                    item_ts.setData(Qt.ItemDataRole.UserRole, rec_id)
+                self.table.setItem(r, 0, item_ts)
+                self.table.setItem(r, 1, QTableWidgetItem(test_name))
+                try:
+                    res_dict = json.loads(res)
+                    res_text = ", ".join(f"{k}: {v}" for k, v in res_dict.items())
+                except Exception:
+                    res_text = res
+                self.table.setItem(r, 2, QTableWidgetItem(res_text))
 
     def add_state(self, payload: Dict[str, Any]) -> None:
         ts = ""
@@ -212,3 +252,24 @@ class HistoryPanel(QWidget):
                     item.setData(Qt.ItemDataRole.UserRole, row[0])
                 self.table.setItem(r, 0, item)
             self._load_state(len(self._states) - 1)
+
+    def _on_delete_selected(self) -> None:
+        rows = self.table.selectionModel().selectedRows()
+        if not rows:
+            QMessageBox.warning(self, self.tr("Ошибка"), self.tr("Ничего не выбрано"))
+            return
+        indexes = sorted((idx.row() for idx in rows), reverse=True)
+        ids = []
+        for row in indexes:
+            item = self.table.item(row, 0)
+            if item is not None:
+                val = item.data(Qt.ItemDataRole.UserRole)
+                if val is not None:
+                    ids.append((val,))
+        if ids:
+            c = self.conn.cursor()
+            c.executemany("DELETE FROM history WHERE id=?", ids)
+            self.conn.commit()
+        for row in indexes:
+            self.table.removeRow(row)
+        self.load_history()
