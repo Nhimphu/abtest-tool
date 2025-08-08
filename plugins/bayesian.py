@@ -1,13 +1,28 @@
-"""Optional Bayesian analysis implementation using numpy and scipy."""
+"""Optional Bayesian analysis implementation using numpy."""
 from typing import Tuple
 from collections.abc import Iterable, Iterator
 
+import math
 import numpy as np
 
 
 def linspace(start: float, stop: float, num: int):
     """Return a list of evenly spaced floats from ``start`` to ``stop``."""
     return [float(v) for v in np.linspace(start, stop, num)]
+
+
+def beta_pdf_list(xs, a, b):
+    coeff = math.gamma(a + b) / (math.gamma(a) * math.gamma(b))
+    out = []
+    for x in xs:
+        if x <= 0.0:
+            out.append(0.0 if a > 1 else coeff * (0.0 ** (a - 1)) * ((1.0 - 0.0) ** (b - 1)))
+            continue
+        if x >= 1.0:
+            out.append(0.0 if b > 1 else coeff * (1.0 ** (a - 1)) * ((1.0 - 1.0) ** (b - 1)))
+            continue
+        out.append(coeff * (x ** (a - 1)) * ((1.0 - x) ** (b - 1)))
+    return out
 
 
 class _ArrMeta(type):
@@ -49,16 +64,6 @@ try:  # expose convenience names for tests
 except Exception:  # pragma: no cover - best effort only
     pass
 
-try:  # optional dependency
-    from scipy.stats import beta
-except ModuleNotFoundError:  # pragma: no cover - optional dependency
-    import logging
-
-    logging.warning(
-        "scipy is not installed; the bayesian plugin will be disabled"
-    )
-    raise
-
 from metrics import track_time
 
 __all__ = ["bayesian_analysis", "linspace", "Arr", "trapz"]
@@ -81,12 +86,19 @@ def bayesian_analysis(
     b2 = beta_prior + (users_b - conv_b)
 
     x = linspace(0, 1, 500)
-    pdf_a = beta.pdf(x, a1, b1)
-    pdf_b = beta.pdf(x, a2, b2)
-    cdf_a = beta.cdf(x, a1, b1)
+    pa = beta_pdf_list(x, a1, b1)
+    pb = beta_pdf_list(x, a2, b2)
 
-    # use the newer ``trapezoid`` integration to avoid deprecation warnings
-    prob = float(np.trapezoid(pdf_b * cdf_a, x))
+    area = float(np.trapezoid(pa, x))
+    if area == 0.0:
+        cdf_a = [0.0] * len(x)
+    else:
+        cum = [0.0]
+        for i in range(1, len(x)):
+            cum.append(cum[-1] + 0.5 * (pa[i - 1] + pa[i]) * (x[i] - x[i - 1]))
+        cdf_a = [v / area for v in cum]
 
-    return float(prob), x, pdf_a, pdf_b
+    prob = float(np.trapezoid([pb[i] * cdf_a[i] for i in range(len(x))], x))
+
+    return float(prob), x, pa, pb
 
