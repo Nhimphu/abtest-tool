@@ -1,5 +1,6 @@
 """Optional Bayesian analysis implementation using numpy and scipy."""
 from typing import Tuple
+from collections.abc import Iterable, Iterator
 
 import numpy as np
 from numpy import linspace
@@ -7,20 +8,27 @@ from numpy import linspace
 
 class _ArrMeta(type):
     def __call__(cls, *args, **kwargs):
-        if hasattr(np, "array"):
-            return np.array(*args, **kwargs)
-        return list(*args, **kwargs)
+        # Materialize generators or generic iterables into a list to ensure
+        # predictable one-dimensional arrays.
+        if len(args) == 1:
+            x = args[0]
+            if isinstance(x, (np.ndarray, list, tuple)):
+                return np.array(x, **kwargs)
+            if isinstance(x, Iterator):
+                return np.array(list(x), **kwargs)
+            if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
+                try:
+                    return np.array(list(x), **kwargs)
+                except TypeError:
+                    pass
+        return np.array(*args, **kwargs)
 
     def __instancecheck__(cls, instance):  # pragma: no cover - simple delegation
-        return hasattr(np, "ndarray") and isinstance(instance, np.ndarray)
+        return isinstance(instance, np.ndarray)
 
 
 class Arr(metaclass=_ArrMeta):
-    """Call as ``Arr(iterable)`` -> ``np.array``; usable in ``isinstance`` checks."""
-
-
-def trapz(y, x):
-    return float(np.trapezoid(y, x))
+    """Callable type: Arr(iterable)->np.array(materialized). Usable in ``isinstance`` checks."""
 
 
 try:  # expose convenience names for tests
@@ -28,10 +36,13 @@ try:  # expose convenience names for tests
 
     if not hasattr(builtins, "linspace"):
         builtins.linspace = linspace
-    if not hasattr(builtins, "Arr"):
-        builtins.Arr = Arr
-    if not hasattr(builtins, "trapz"):
-        builtins.trapz = trapz
+    builtins.Arr = Arr
+    from numpy import trapezoid as _trapezoid
+
+    def trapz(y, x):
+        return float(_trapezoid(y, x))
+
+    builtins.trapz = trapz
 except Exception:  # pragma: no cover - best effort only
     pass
 
