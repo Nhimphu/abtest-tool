@@ -1,6 +1,7 @@
 import math
 from typing import Tuple, Dict
 
+import numpy as np
 from scipy.stats import norm
 
 
@@ -50,6 +51,8 @@ def ratio_test(
     fieller: bool = False,
 ) -> Dict[str, object]:
     ratio = mean2 / mean1
+    if not np.isscalar(ratio):
+        ratio = float(ratio)
     log_ratio = math.log(ratio)
     se_log = math.sqrt(var1 / (n1 * mean1 ** 2) + var2 / (n2 * mean2 ** 2))
     z_stat = log_ratio / se_log if se_log > 0 else 0.0

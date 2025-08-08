@@ -18,7 +18,9 @@ def wilson_ci(x: int, n: int, alpha: float = 0.05) -> Tuple[float, float]:
 def newcombe_ci(x1: int, n1: int, x2: int, n2: int, alpha: float = 0.05) -> Tuple[float, float]:
     p1_lo, p1_hi = wilson_ci(x1, n1, alpha)
     p2_lo, p2_hi = wilson_ci(x2, n2, alpha)
-    return p1_lo - p2_hi, p1_hi - p2_lo
+    lo = p2_lo - p1_hi
+    hi = p2_hi - p1_lo
+    return min(lo, hi), max(lo, hi)
 
 
 def _p_value_from_z(z: float, sided: str = "two") -> float:
@@ -49,4 +51,9 @@ def prop_diff_test(
     z = effect / se if se > 0 else 0.0
     p_value = _p_value_from_z(z, sided)
     ci = newcombe_ci(x1, n1, x2, n2, alpha)
-    return {"p_value": p_value, "effect": effect, "ci": ci, "notes": "newcombe"}
+    return {
+        "p_value": p_value,
+        "effect": effect,
+        "ci": ci,
+        "method": "newcombe_wilson_diff",
+    }
