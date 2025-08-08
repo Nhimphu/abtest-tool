@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Tuple
+from typing import Tuple, Optional
 
 import numpy as np
 import pandas as pd
@@ -9,6 +9,7 @@ from .stats_binomial import prop_diff_test
 from .stats_continuous import welch_ttest, yuen_trimmed_mean_test, bootstrap_bca_ci
 from .stats_ratio import ratio_test
 from .cuped import estimate_theta, apply_cuped
+from .sequential import make_plan, sequential_test
 
 
 @dataclass
@@ -17,6 +18,7 @@ class AnalysisResult:
     effect: float
     ci: Tuple[float, float]
     method_notes: str = ""
+    meta: Optional[dict] = None
 
 
 def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
@@ -28,6 +30,7 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
     mask1 = df["group"] == groups[0]
     mask2 = df["group"] == groups[1] if len(groups) > 1 else ~mask1
     notes = []
+    meta: dict = {}
     if config.use_cuped:
         pre_col = config.preperiod_metric_col
         if not pre_col or pre_col not in df.columns:
@@ -76,4 +79,23 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
         notes.append(res["notes"])
     else:
         raise ValueError("unknown metric type")
-    return AnalysisResult(p_value=p_value, effect=effect, ci=ci, method_notes=", ".join(notes))
+    if getattr(config, "use_sequential", False):
+        k = max(1, int(getattr(config, "sequential_looks", 5)))
+        preset = (getattr(config, "sequential_preset", "pocock") or "pocock")
+        plan = make_plan(k, float(config.alpha), preset)
+        history = list(getattr(config, "sequential_history_p", []))
+        if not history or history[-1] != p_value:
+            history.append(float(p_value))
+        decision = sequential_test(history, plan)
+        meta["sequential"] = {
+            "plan": plan,
+            "history_len": len(history),
+            "decision": decision,
+        }
+        notes.append(
+            f"Sequential ({preset}, k={k}): look={decision['look']}, "
+            f"{'STOP' if decision['stop'] else 'continue'}, "
+            f"p≤{plan['thresholds'][decision['look']-1]:.4g} at this look; "
+            f"spent≈{decision['spent_alpha_cum']:.4g}."
+        )
+    return AnalysisResult(p_value=p_value, effect=effect, ci=ci, method_notes=", ".join(notes), meta=meta or None)

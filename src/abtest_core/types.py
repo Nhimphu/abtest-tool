@@ -26,6 +26,8 @@ class AnalysisConfig(BaseModel):
     preperiod_metric_col: Optional[str] = None
     use_sequential: bool = False
     sequential_preset: Optional[Literal["pocock", "obf"]] = None
+    sequential_looks: int = 5
+    sequential_history_p: List[float] = []  # optional, allow external history
     nan_policy: Literal["drop", "zero", "error"] = "drop"
     metric_type: MetricType
     segments: List[str] = []
