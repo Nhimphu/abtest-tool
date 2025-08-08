@@ -35,3 +35,6 @@ class AnalysisConfig(BaseModel):
     robust: bool = False
     bootstrap: bool = False
     use_fieller: bool = False
+    use_bayes: bool = False
+    bayes_rope: tuple[float, float] | None = None
+    bayes_draws: int = 10000
