@@ -89,16 +89,14 @@ def bayesian_analysis(
     pa = beta_pdf_list(x, a1, b1)
     pb = beta_pdf_list(x, a2, b2)
 
-    area = float(np.trapezoid(pa, x))
-    if area == 0.0:
-        cdf_a = [0.0] * len(x)
-    else:
-        cum = [0.0]
-        for i in range(1, len(x)):
-            cum.append(cum[-1] + 0.5 * (pa[i - 1] + pa[i]) * (x[i] - x[i - 1]))
-        cdf_a = [v / area for v in cum]
+    # Prefix trapezoid CDF of ``pa`` over ``x`` (no normalization to unit area)
+    cdf_a = [0.0] * len(x)
+    for i in range(1, len(x)):
+        dx = x[i] - x[i - 1]
+        cdf_a[i] = cdf_a[i - 1] + 0.5 * (pa[i - 1] + pa[i]) * dx
 
-    prob = float(np.trapezoid([pb[i] * cdf_a[i] for i in range(len(x))], x))
+    integrand = [pb[i] * cdf_a[i] for i in range(len(x))]
+    prob = float(np.trapezoid(integrand, x))
 
     return float(prob), x, pa, pb
 
