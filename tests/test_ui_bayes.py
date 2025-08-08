@@ -6,35 +6,39 @@ import importlib
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
-# Provide minimal numpy/scipy stubs so the plugin can be imported
+# Provide minimal numpy/scipy stubs only when the real packages are missing
+try:
+    import numpy as np  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover - executed only in limited envs
+    np_mod = types.ModuleType('numpy')
 
-np_mod = types.ModuleType('numpy')
+    class Arr(list):
+        def __mul__(self, other):
+            if isinstance(other, (list, Arr)):
+                return Arr(a * b for a, b in zip(self, other))
+            return Arr(a * other for a in self)
 
-class Arr(list):
-    def __mul__(self, other):
-        if isinstance(other, (list, Arr)):
-            return Arr(a*b for a, b in zip(self, other))
-        return Arr(a*other for a in self)
-    __rmul__ = __mul__
+        __rmul__ = __mul__
 
-def linspace(a, b, n):
-    step = (b - a) / (n - 1)
-    return Arr(a + step * i for i in range(n))
+    def linspace(a, b, n):
+        step = (b - a) / (n - 1)
+        return Arr(a + step * i for i in range(n))
 
-np_mod.linspace = linspace
+    np_mod.linspace = linspace
 
-def trapz(y, x):
-    return sum((y[i] + y[i+1]) * (x[i+1] - x[i]) / 2 for i in range(len(y)-1))
+    def trapz(y, x):
+        return sum((y[i] + y[i + 1]) * (x[i + 1] - x[i]) / 2 for i in range(len(y) - 1))
 
-np_mod.trapz = trapz
-np_mod.ndarray = list
-rand_mod = types.ModuleType('numpy.random')
-rand_mod.binomial = lambda n, p, size=None: [0]
-rand_mod.randint = lambda a, b=None: 0
-rand_mod.random = lambda: 0.0
-np_mod.random = rand_mod
-sys.modules['numpy'] = np_mod
-sys.modules['numpy.random'] = rand_mod
+    np_mod.trapz = trapz
+    np_mod.ndarray = list
+    rand_mod = types.ModuleType('numpy.random')
+    rand_mod.binomial = lambda n, p, size=None: [0]
+    rand_mod.randint = lambda a, b=None: 0
+    rand_mod.random = lambda: 0.0
+    np_mod.random = rand_mod
+    sys.modules['numpy'] = np_mod
+    sys.modules['numpy.random'] = rand_mod
+    np = np_mod
 
 # simple beta pdf/cdf helpers
 
@@ -57,12 +61,15 @@ def beta_cdf(x, a, b):
         total += (beta_pdf(x1, a, b) + beta_pdf(x2, a, b)) * step / 2
     return total
 
-stats_mod = types.ModuleType('scipy.stats')
-stats_mod.beta = types.SimpleNamespace(pdf=beta_pdf, cdf=beta_cdf)
-scipy_mod = types.ModuleType('scipy')
-scipy_mod.stats = stats_mod
-sys.modules['scipy'] = scipy_mod
-sys.modules['scipy.stats'] = stats_mod
+try:
+    from scipy import stats as stats_mod  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
+    stats_mod = types.ModuleType('scipy.stats')
+    stats_mod.beta = types.SimpleNamespace(pdf=beta_pdf, cdf=beta_cdf)
+    scipy_mod = types.ModuleType('scipy')
+    scipy_mod.stats = stats_mod
+    sys.modules['scipy'] = scipy_mod
+    sys.modules['scipy.stats'] = stats_mod
 
 # Stub plotly module required by ui_mainwindow imports
 plotly_mod = types.ModuleType('plotly')

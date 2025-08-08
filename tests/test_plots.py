@@ -14,7 +14,9 @@ if "plugin_loader" not in sys.modules:
     pl.get_plugin = lambda name: None
     sys.modules["plugin_loader"] = pl
 
-if "numpy" not in sys.modules:
+try:
+    import numpy as np  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
     np_mod = types.ModuleType("numpy")
 
     def linspace(a, b, n):
@@ -34,8 +36,11 @@ if "numpy" not in sys.modules:
     np_mod.random = rand_mod
     sys.modules["numpy"] = np_mod
     sys.modules["numpy.random"] = rand_mod
+    np = np_mod
 
-if "scipy.stats" not in sys.modules:
+try:
+    from scipy import stats as stats_mod  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
     nd = statistics.NormalDist()
 
     class Norm:

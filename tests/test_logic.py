@@ -11,24 +11,30 @@ import logging
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # Minimal stubs for optional dependencies
-if 'numpy' not in sys.modules:
+try:
+    import numpy as np  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
     np_mod = types.ModuleType('numpy')
+
     def linspace(a, b, n):
         step = (b - a) / (n - 1)
         return [a + step * i for i in range(n)]
+
     np_mod.linspace = linspace
     np_mod.asarray = lambda x, dtype=None: list(x)
     np_mod.argmax = lambda arr: arr.index(max(arr))
+
     def cov(a, b, ddof=1):
         mean_a = sum(a) / len(a)
         mean_b = sum(b) / len(b)
-        cov_ab = sum((ai - mean_a) * (bi - mean_b) for ai, bi in zip(a, b)) / (len(a)-ddof)
-        var_a = sum((ai - mean_a) ** 2 for ai in a) / (len(a)-ddof)
-        var_b = sum((bi - mean_b) ** 2 for bi in b) / (len(a)-ddof)
+        cov_ab = sum((ai - mean_a) * (bi - mean_b) for ai, bi in zip(a, b)) / (len(a) - ddof)
+        var_a = sum((ai - mean_a) ** 2 for ai in a) / (len(a) - ddof)
+        var_b = sum((bi - mean_b) ** 2 for bi in b) / (len(a) - ddof)
         return [[var_a, cov_ab], [cov_ab, var_b]]
+
     np_mod.cov = cov
-    np_mod.var = lambda x, ddof=1: sum((xi - sum(x)/len(x))**2 for xi in x) / (len(x)-ddof)
-    np_mod.trapz = lambda y, x: sum((y[i] + y[i+1]) * (x[i+1] - x[i]) / 2 for i in range(len(y)-1))
+    np_mod.var = lambda x, ddof=1: sum((xi - sum(x) / len(x)) ** 2 for xi in x) / (len(x) - ddof)
+    np_mod.trapz = lambda y, x: sum((y[i] + y[i + 1]) * (x[i + 1] - x[i]) / 2 for i in range(len(y) - 1))
     rand_mod = types.ModuleType('numpy.random')
     rand_mod.binomial = lambda n, p, size=None: [0]
     rand_mod.randint = lambda a, b=None: 0
@@ -36,21 +42,26 @@ if 'numpy' not in sys.modules:
     np_mod.random = rand_mod
     sys.modules['numpy'] = np_mod
     sys.modules['numpy.random'] = rand_mod
+    np = np_mod
 
-if 'scipy.stats' not in sys.modules:
+try:
+    from scipy import stats as stats_mod  # type: ignore
+except ModuleNotFoundError:  # pragma: no cover
     nd = statistics.NormalDist()
+
     class Norm:
         @staticmethod
         def ppf(p):
             return nd.inv_cdf(p)
+
         @staticmethod
         def cdf(x):
             return nd.cdf(x)
+
     stats_mod = types.ModuleType('scipy.stats')
     stats_mod.norm = Norm
-    stats_mod.beta = types.SimpleNamespace(pdf=lambda *a, **k: None,
-                                           cdf=lambda *a, **k: None)
-    stats_mod.chi2 = types.SimpleNamespace(cdf=lambda x, df: 1 - math.exp(-x/2))
+    stats_mod.beta = types.SimpleNamespace(pdf=lambda *a, **k: None, cdf=lambda *a, **k: None)
+    stats_mod.chi2 = types.SimpleNamespace(cdf=lambda x, df: 1 - math.exp(-x / 2))
     scipy_mod = types.ModuleType('scipy')
     scipy_mod.stats = stats_mod
     sys.modules['scipy'] = scipy_mod
