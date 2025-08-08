@@ -9,14 +9,14 @@ from collections.abc import Iterable, Iterator
 # Compatibility shims used by tests
 # ---------------------------------------------------------------------------
 
-def linspace(start: float, stop: float, num: int):
-    """Return a Python list of evenly spaced floats."""
-    return [float(v) for v in np.linspace(start, stop, num)]
-
-
 def trapz(y, x):
     """Return the integral of *y* with respect to *x* using the trapezoid rule."""
     return float(np.trapezoid(y, x))
+
+
+def linspace(a, b, n):
+    """Return a Python list of evenly spaced floats."""
+    return [float(v) for v in np.linspace(a, b, n)]
 
 
 class _ArrMeta(type):
@@ -50,19 +50,28 @@ except Exception:  # pragma: no cover - best effort only
 # Core beta PDF/CDF utilities
 # ---------------------------------------------------------------------------
 
+def beta_pdf_scalar(x, a, b):
+    return math.gamma(a + b) / (math.gamma(a) * math.gamma(b)) * (x ** (a - 1)) * ((1.0 - x) ** (b - 1))
+
+
 def beta_pdf_list(xs, a, b):
-    coeff = math.gamma(a + b) / (math.gamma(a) * math.gamma(b))
-    out = []
-    for x in xs:
-        out.append(coeff * (x ** (a - 1)) * ((1.0 - x) ** (b - 1)))
-    return out
+    return [beta_pdf_scalar(v, a, b) for v in xs]
 
 
-def beta_cdf_prefix(xs, pdf_values):
-    cdf = [0.0] * len(xs)
-    for i in range(1, len(xs)):
-        cdf[i] = trapz(pdf_values[: i + 1], xs[: i + 1])
-    return cdf
+def beta_cdf_scalar(x, a, b, n=1000):
+    if x <= 0.0:
+        return 0.0
+    step = x / n
+    total = 0.0
+    for i in range(n):
+        x1 = i * step
+        x2 = x1 + step
+        total += (beta_pdf_scalar(x1, a, b) + beta_pdf_scalar(x2, a, b)) * step * 0.5
+    return total
+
+
+def beta_cdf_list(xs, a, b):
+    return [beta_cdf_scalar(v, a, b) for v in xs]
 
 
 # ---------------------------------------------------------------------------
@@ -81,8 +90,7 @@ def bayesian_analysis(prior_a, prior_b, nA, succA, nB, succB):
     x = linspace(0, 1, 500)
     pa = beta_pdf_list(x, a1, b1)
     pb = beta_pdf_list(x, a2, b2)
-
-    cdf_a = beta_cdf_prefix(x, pa)
+    cdf_a = beta_cdf_list(x, a1, b1)
     integrand = [pb[i] * cdf_a[i] for i in range(len(x))]
     prob = trapz(integrand, x)
 
