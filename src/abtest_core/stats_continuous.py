@@ -1,8 +1,10 @@
 import math
-from typing import Tuple, Callable, Dict
+from typing import Callable, Dict, Tuple
 
 import numpy as np
-from scipy.stats import t, trim_mean, ttest_ind, norm
+from statistics import NormalDist
+
+norm = NormalDist()
 
 
 def welch_ttest(
@@ -17,23 +19,25 @@ def welch_ttest(
 ) -> Dict[str, object]:
     effect = mean2 - mean1
     se = math.sqrt(var1 / n1 + var2 / n2)
-    df_num = (var1 / n1 + var2 / n2) ** 2
-    df_den = (var1 ** 2) / (n1 ** 2 * (n1 - 1)) + (var2 ** 2) / (n2 ** 2 * (n2 - 1))
-    df = df_num / df_den if df_den > 0 else 1
     t_stat = effect / se if se > 0 else 0.0
     if sided == "two":
-        p_value = 2 * (1 - t.cdf(abs(t_stat), df))
-        t_crit = t.ppf(1 - alpha / 2, df)
+        p_value = 2 * (1 - norm.cdf(abs(t_stat)))
+        t_crit = norm.inv_cdf(1 - alpha / 2)
     elif sided == "left":
-        p_value = t.cdf(t_stat, df)
-        t_crit = t.ppf(1 - alpha, df)
+        p_value = norm.cdf(t_stat)
+        t_crit = norm.inv_cdf(1 - alpha)
     elif sided == "right":
-        p_value = 1 - t.cdf(t_stat, df)
-        t_crit = t.ppf(1 - alpha, df)
+        p_value = 1 - norm.cdf(t_stat)
+        t_crit = norm.inv_cdf(1 - alpha)
     else:
         raise ValueError("sided must be 'two', 'left', or 'right'")
     ci = (effect - t_crit * se, effect + t_crit * se)
-    return {"p_value": p_value, "effect": effect, "ci": ci, "notes": "welch"}
+    return {
+        "p_value": float(p_value),
+        "effect": float(effect),
+        "ci": (float(ci[0]), float(ci[1])),
+        "notes": "welch",
+    }
 
 
 def yuen_trimmed_mean_test(
@@ -45,14 +49,17 @@ def yuen_trimmed_mean_test(
 ) -> Dict[str, object]:
     a = np.asarray(a)
     b = np.asarray(b)
-    stat, p_value = ttest_ind(a, b, equal_var=False, trim=trim)
-    m1 = trim_mean(a, proportiontocut=trim)
-    m2 = trim_mean(b, proportiontocut=trim)
-    effect = m2 - m1
     g1 = int(trim * len(a))
     g2 = int(trim * len(b))
-    a_win = np.sort(a)
-    b_win = np.sort(b)
+    a_sorted = np.sort(a)
+    b_sorted = np.sort(b)
+    a_trim = a_sorted[g1: len(a) - g1] if g1 > 0 else a_sorted
+    b_trim = b_sorted[g2: len(b) - g2] if g2 > 0 else b_sorted
+    m1 = a_trim.mean()
+    m2 = b_trim.mean()
+    effect = m2 - m1
+    a_win = a_sorted.copy()
+    b_win = b_sorted.copy()
     if g1 > 0:
         a_win[:g1] = a_win[g1]
         a_win[-g1:] = a_win[-g1 - 1]
@@ -61,18 +68,28 @@ def yuen_trimmed_mean_test(
         b_win[-g2:] = b_win[-g2 - 1]
     wv1 = np.var(a_win, ddof=1)
     wv2 = np.var(b_win, ddof=1)
-    n1 = len(a) - 2 * g1
-    n2 = len(b) - 2 * g2
+    n1 = len(a_trim)
+    n2 = len(b_trim)
     se = math.sqrt(wv1 / (n1 * (n1 - 1)) + wv2 / (n2 * (n2 - 1)))
-    df_num = (wv1 / (n1 * (n1 - 1)) + wv2 / (n2 * (n2 - 1))) ** 2
-    df_den = (wv1 ** 2) / ((n1 ** 2) * (n1 - 1) ** 2 * (n1 - 1)) + (wv2 ** 2) / ((n2 ** 2) * (n2 - 1) ** 2 * (n2 - 1))
-    df = df_num / df_den if df_den > 0 else n1 + n2 - 2
+    t_stat = effect / se if se > 0 else 0.0
     if sided == "two":
-        t_crit = t.ppf(1 - alpha / 2, df)
+        p_value = 2 * (1 - norm.cdf(abs(t_stat)))
+        t_crit = norm.inv_cdf(1 - alpha / 2)
+    elif sided == "left":
+        p_value = norm.cdf(t_stat)
+        t_crit = norm.inv_cdf(1 - alpha)
+    elif sided == "right":
+        p_value = 1 - norm.cdf(t_stat)
+        t_crit = norm.inv_cdf(1 - alpha)
     else:
-        t_crit = t.ppf(1 - alpha, df)
+        raise ValueError("sided must be 'two', 'left', or 'right'")
     ci = (effect - t_crit * se, effect + t_crit * se)
-    return {"p_value": p_value, "effect": effect, "ci": ci, "notes": "yuen"}
+    return {
+        "p_value": float(p_value),
+        "effect": float(effect),
+        "ci": (float(ci[0]), float(ci[1])),
+        "notes": "yuen",
+    }
 
 
 def bootstrap_bca_ci(
@@ -92,8 +109,7 @@ def bootstrap_bca_ci(
         sb = np.random.choice(b, n2, replace=True)
         boot.append(fn_effect(sa, sb))
     boot = np.sort(boot)
-    z0 = norm.ppf((boot < obs).mean())
-    # jackknife
+    z0 = norm.inv_cdf((boot < obs).mean())
     jacks = []
     for i in range(n1):
         jacks.append(fn_effect(np.delete(a, i), b))
@@ -104,8 +120,8 @@ def bootstrap_bca_ci(
     num = np.sum((jack_mean - jacks) ** 3)
     den = 6 * (np.sum((jack_mean - jacks) ** 2) ** 1.5)
     a_hat = num / den if den != 0 else 0.0
-    al = norm.cdf(z0 + (z0 + norm.ppf(alpha / 2)) / (1 - a_hat * (z0 + norm.ppf(alpha / 2))))
-    au = norm.cdf(z0 + (z0 + norm.ppf(1 - alpha / 2)) / (1 - a_hat * (z0 + norm.ppf(1 - alpha / 2))))
-    lo = np.percentile(boot, al * 100)
-    hi = np.percentile(boot, au * 100)
+    al = norm.cdf(z0 + (z0 + norm.inv_cdf(alpha / 2)) / (1 - a_hat * (z0 + norm.inv_cdf(alpha / 2))))
+    au = norm.cdf(z0 + (z0 + norm.inv_cdf(1 - alpha / 2)) / (1 - a_hat * (z0 + norm.inv_cdf(1 - alpha / 2))))
+    lo = float(np.percentile(boot, al * 100))
+    hi = float(np.percentile(boot, au * 100))
     return lo, hi

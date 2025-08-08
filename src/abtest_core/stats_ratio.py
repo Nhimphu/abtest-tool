@@ -1,21 +1,23 @@
 import math
-from typing import Tuple, Dict
+from typing import Dict, Tuple
 
 import numpy as np
-from scipy.stats import norm
+from statistics import NormalDist
+
+norm = NormalDist()
 
 
 def delta_mean_diff_ci(mean1: float, var1: float, n1: int, mean2: float, var2: float, n2: int, alpha: float = 0.05) -> Tuple[float, float]:
     effect = mean2 - mean1
     se = math.sqrt(var1 / n1 + var2 / n2)
-    z = norm.ppf(1 - alpha / 2)
+    z = norm.inv_cdf(1 - alpha / 2)
     return effect - z * se, effect + z * se
 
 
 def delta_ratio_ci(mean1: float, var1: float, n1: int, mean2: float, var2: float, n2: int, alpha: float = 0.05) -> Tuple[float, float]:
     ratio = mean2 / mean1
     se = ratio * math.sqrt(var1 / (n1 * mean1 ** 2) + var2 / (n2 * mean2 ** 2))
-    z = norm.ppf(1 - alpha / 2)
+    z = norm.inv_cdf(1 - alpha / 2)
     return ratio - z * se, ratio + z * se
 
 
@@ -24,7 +26,7 @@ def fieller_ratio_ci(mean1: float, var1: float, n1: int, mean2: float, var2: flo
     b = mean2
     va = var1 / n1
     vb = var2 / n2
-    z = norm.ppf(1 - alpha / 2)
+    z = norm.inv_cdf(1 - alpha / 2)
     g = a * b
     h = a ** 2 - z ** 2 * va
     k = b ** 2 - z ** 2 * vb
@@ -69,4 +71,10 @@ def ratio_test(
     else:
         ci = delta_ratio_ci(mean1, var1, n1, mean2, var2, n2, alpha)
         note = "delta"
-    return {"p_value": p_value, "effect": ratio, "ci": ci, "notes": note}
+    ci = (float(ci[0]), float(ci[1])) if isinstance(ci, tuple) else ci
+    return {
+        "p_value": float(p_value),
+        "effect": float(ratio),
+        "ci": ci,
+        "notes": note,
+    }

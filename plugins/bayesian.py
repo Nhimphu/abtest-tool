@@ -7,21 +7,31 @@ from numpy import linspace
 
 class _ArrMeta(type):
     def __call__(cls, *args, **kwargs):
-        return np.array(*args, **kwargs)
+        if hasattr(np, "array"):
+            return np.array(*args, **kwargs)
+        return list(*args, **kwargs)
 
     def __instancecheck__(cls, instance):  # pragma: no cover - simple delegation
-        return isinstance(instance, np.ndarray)
+        return hasattr(np, "ndarray") and isinstance(instance, np.ndarray)
 
 
 class Arr(metaclass=_ArrMeta):
-    """Callable type compatible with ``isinstance(x, Arr)`` and ``Arr(iterable)``."""
+    """Call as ``Arr(iterable)`` -> ``np.array``; usable in ``isinstance`` checks."""
+
+
+def trapz(y, x):
+    return float(np.trapezoid(y, x))
 
 
 try:  # expose convenience names for tests
     import builtins  # pragma: no cover - trivial import
 
-    builtins.linspace = linspace
-    builtins.Arr = Arr
+    if not hasattr(builtins, "linspace"):
+        builtins.linspace = linspace
+    if not hasattr(builtins, "Arr"):
+        builtins.Arr = Arr
+    if not hasattr(builtins, "trapz"):
+        builtins.trapz = trapz
 except Exception:  # pragma: no cover - best effort only
     pass
 
@@ -37,7 +47,7 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency
 
 from metrics import track_time
 
-__all__ = ["bayesian_analysis", "linspace"]
+__all__ = ["bayesian_analysis", "linspace", "Arr", "trapz"]
 
 
 @track_time
@@ -64,8 +74,5 @@ def bayesian_analysis(
     # use the newer ``trapezoid`` integration to avoid deprecation warnings
     prob = float(np.trapezoid(pdf_b * cdf_a, x))
 
-    def _to_list(arr):
-        return arr.tolist() if hasattr(arr, "tolist") else list(arr)
-
-    return prob, x, _to_list(pdf_a), _to_list(pdf_b)
+    return float(prob), x, pdf_a, pdf_b
 

@@ -30,7 +30,7 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
         x2, n2 = g2.sum(), g2.count()
         res = prop_diff_test(int(x1), int(n1), int(x2), int(n2), alpha=config.alpha, sided=config.sided)
         p_value, effect, ci = res["p_value"], res["effect"], res["ci"]
-        notes.append(res["notes"])
+        notes.append(res["method"])
     elif config.metric_type == "continuous":
         if config.robust:
             res = yuen_trimmed_mean_test(g1.to_numpy(), g2.to_numpy(), alpha=config.alpha, sided=config.sided)

@@ -1,14 +1,15 @@
 import math
-from typing import Tuple, Dict
+from typing import Dict, Tuple
+from statistics import NormalDist
 
-from scipy.stats import norm
+norm = NormalDist()
 
 
 def wilson_ci(x: int, n: int, alpha: float = 0.05) -> Tuple[float, float]:
     if n <= 0:
         return 0.0, 0.0
     p = x / n
-    z = norm.ppf(1 - alpha / 2)
+    z = norm.inv_cdf(1 - alpha / 2)
     denom = 1 + z ** 2 / n
     centre = (p + z ** 2 / (2 * n)) / denom
     margin = z * math.sqrt(p * (1 - p) / n + z ** 2 / (4 * n ** 2)) / denom
@@ -50,10 +51,11 @@ def prop_diff_test(
     se = math.sqrt(pooled * (1 - pooled) * (1 / n1 + 1 / n2))
     z = effect / se if se > 0 else 0.0
     p_value = _p_value_from_z(z, sided)
-    ci = newcombe_ci(x1, n1, x2, n2, alpha)
+    ci_lo, ci_hi = newcombe_ci(x1, n1, x2, n2, alpha)
+    ci_lo, ci_hi = sorted((ci_lo, ci_hi))
     return {
-        "p_value": p_value,
-        "effect": effect,
-        "ci": ci,
+        "p_value": float(p_value),
+        "effect": float(effect),
+        "ci": (float(ci_lo), float(ci_hi)),
         "method": "newcombe_wilson_diff",
     }
