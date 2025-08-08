@@ -2,7 +2,6 @@
 
 import math
 import numpy as np
-from collections.abc import Iterable, Iterator
 
 
 # ---------------------------------------------------------------------------
@@ -19,21 +18,7 @@ def linspace(a, b, n):
     return [float(v) for v in np.linspace(a, b, n)]
 
 
-class _ArrMeta(type):
-    def __call__(cls, *args, **kwargs):
-        if len(args) == 1:
-            x = args[0]
-            if isinstance(x, (np.ndarray, list, tuple)):
-                return np.array(x, **kwargs)
-            if isinstance(x, Iterator):
-                return np.array(list(x), **kwargs)
-            if isinstance(x, Iterable) and not isinstance(x, (str, bytes)):
-                return np.array(list(x), **kwargs)
-        return np.array(*args, **kwargs)
-
-
-class Arr(metaclass=_ArrMeta):
-    pass
+Arr = list
 
 
 try:  # expose shims for tests expecting bare names
@@ -88,8 +73,10 @@ def bayesian_analysis(prior_a, prior_b, nA, succA, nB, succB):
     b2 = prior_b + (nB - succB)
 
     x = linspace(0, 1, 500)
-    pa = beta_pdf_list(x, a1, b1)
-    pb = beta_pdf_list(x, a2, b2)
+    coeff1 = math.gamma(a1 + b1) / (math.gamma(a1) * math.gamma(b1))
+    coeff2 = math.gamma(a2 + b2) / (math.gamma(a2) * math.gamma(b2))
+    pa = [coeff1 * (t ** (a1 - 1)) * ((1.0 - t) ** (b1 - 1)) for t in x]
+    pb = [coeff2 * (t ** (a2 - 1)) * ((1.0 - t) ** (b2 - 1)) for t in x]
     cdf_a = beta_cdf_list(x, a1, b1)
     integrand = [pb[i] * cdf_a[i] for i in range(len(x))]
     prob = trapz(integrand, x)
