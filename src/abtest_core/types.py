@@ -29,3 +29,6 @@ class AnalysisConfig(BaseModel):
     metric_type: MetricType
     segments: List[str] = []
     multiple_testing: Literal["none", "holm", "bonferroni", "by"] = "holm"
+    robust: bool = False
+    bootstrap: bool = False
+    use_fieller: bool = False
