@@ -110,9 +110,9 @@ from stats.ab_test import (
     run_sequential_analysis,
     run_obrien_fleming,
     calculate_roi,
-    srm_check,
     cuped_adjustment,
 )
+from abtest_core.srm import srm_check
 import plugin_loader
 from plots import (
     plot_bayesian_posterior,
@@ -1260,23 +1260,31 @@ class ABTestWindow(QMainWindow):
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
-            alpha = self.alpha_slider.value() / 100
-
-            flag, p = srm_check(ua, ub, alpha=alpha)
-            if flag:
+            counts = {"A": ua, "B": ub}
+            if uc > 0:
+                counts["C"] = uc
+            srm_res = srm_check(counts)
+            force = False
+            if not srm_res["passed"]:
                 SB = getattr(
                     QMessageBox,
                     "StandardButton",
                     type("SB", (), {"Ignore": 1, "Cancel": 2}),
                 )
+                details = (
+                    f"expected: {srm_res['expected']}\n"
+                    f"observed: {srm_res['observed']}\n"
+                    f"p_value: {srm_res['p_value']:.3g}"
+                )
                 btn = QMessageBox.warning(
                     self,
-                    "SRM detected",
-                    f"SRM check failed (p={p:.3f}). Results may be biased.",
+                    "SRM: дисбаланс трафика",
+                    details,
                     getattr(SB, "Ignore", 1) | getattr(SB, "Cancel", 2),
                 )
                 if btn != getattr(SB, "Ignore", btn):
                     return
+                force = True
 
             if hasattr(self, "metric_a") and hasattr(self, "covariate_a"):
                 adj = cuped_adjustment(self.metric_a, self.covariate_a)
@@ -1291,7 +1299,17 @@ class ABTestWindow(QMainWindow):
                 cc = int(round(sum(adj)))
                 uc = len(adj)
 
-            res = evaluate_abn_test(ua, ca, ub, cb, uc, cc, alpha=alpha)
+            alpha = self.alpha_slider.value() / 100
+            res = evaluate_abn_test(
+                ua,
+                ca,
+                ub,
+                cb,
+                uc if uc > 0 else None,
+                cc if uc > 0 else None,
+                alpha=alpha,
+                force_run_when_srm_failed=force,
+            )
             html = (
                 f"<pre>{self.tr('A')} {res['cr_a']:.2%} ({ca}/{ua})\n"
                 f"{self.tr('B')} {res['cr_b']:.2%} ({cb}/{ub})\n"

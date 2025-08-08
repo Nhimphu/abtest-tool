@@ -202,7 +202,16 @@ def test_analyze_abn_triggers_srm(monkeypatch):
         return 1  # Ignore button
 
     monkeypatch.setattr(ui_mainwindow.QMessageBox, 'warning', warn)
-    monkeypatch.setattr(ui_mainwindow, 'srm_check', lambda *a, **k: (True, 0.01))
+    monkeypatch.setattr(
+        ui_mainwindow,
+        'srm_check',
+        lambda *a, **k: {
+            'p_value': 0.01,
+            'passed': False,
+            'expected': {},
+            'observed': {},
+        },
+    )
 
     dummy = types.SimpleNamespace(
         users_A_var=types.SimpleNamespace(text=lambda: '1000'),

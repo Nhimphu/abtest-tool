@@ -119,7 +119,6 @@ from stats.ab_test import (
     evaluate_abn_test,
     run_obrien_fleming,
     cuped_adjustment,
-    srm_check,
     pocock_alpha_curve,
 )
 from bandit.strategies import ucb1, epsilon_greedy
@@ -187,13 +186,6 @@ def test_cuped_no_change_with_zero_covariate():
     x = [1, 2, 3]
     adjusted = cuped_adjustment(x, [0, 0, 0])
     assert all(math.isclose(a, b) for a, b in zip(x, adjusted))
-
-
-def test_srm_check_detects_imbalance():
-    flag, p = srm_check(1000, 500)
-    assert flag and p < 0.05
-
-
 def test_pocock_alpha_curve_len():
     curve = pocock_alpha_curve(0.05, 3)
     assert len(curve) == 3 and all(0 < a < 0.05 for a in curve)

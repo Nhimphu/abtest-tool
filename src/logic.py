@@ -10,9 +10,9 @@ from stats.ab_test import (
     run_obrien_fleming,
     calculate_roi,
     cuped_adjustment,
-    srm_check,
     pocock_alpha_curve,
 )
+from abtest_core.srm import srm_check
 
 from bandit.strategies import thompson_sampling, ucb1, epsilon_greedy
 
