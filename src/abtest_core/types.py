@@ -23,6 +23,7 @@ class AnalysisConfig(BaseModel):
     alpha: float
     sided: Literal["two", "left", "right"] = "two"
     use_cuped: bool = False
+    preperiod_metric_col: Optional[str] = None
     use_sequential: bool = False
     sequential_preset: Optional[Literal["pocock", "obf"]] = None
     nan_policy: Literal["drop", "zero", "error"] = "drop"

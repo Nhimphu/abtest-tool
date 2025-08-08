@@ -1189,6 +1189,30 @@ class ABTestWindow(QMainWindow):
     def show_results(self, text: str) -> None:
         """Display analysis results."""
         self.results_text.setHtml(self.tr(text))
+        if "CUPED" in text:
+            try:
+                import re
+                import base64
+                from io import BytesIO
+                import matplotlib.pyplot as plt
+
+                m_red = re.search(r"variance reduction≈([\d\.eE+-]+)%", text)
+                if m_red:
+                    red = float(m_red.group(1))
+                    before, after = 1.0, 1.0 - red / 100.0
+                    fig, ax = plt.subplots(figsize=(2, 2))
+                    ax.bar([self.tr("До"), self.tr("После")], [before, after])
+                    ax.set_title(self.tr("CUPED"))
+                    ax.set_ylim(0, max(before, after) * 1.1)
+                    buf = BytesIO()
+                    fig.savefig(buf, format="png", bbox_inches="tight")
+                    plt.close(fig)
+                    img = base64.b64encode(buf.getvalue()).decode("ascii")
+                    self.results_text.append(
+                        f"<br><img src='data:image/png;base64,{img}'/>"
+                    )
+            except Exception:
+                pass
 
     # ----- auth -----
     def authenticate(self):

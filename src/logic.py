@@ -13,6 +13,7 @@ from stats.ab_test import (
     pocock_alpha_curve,
 )
 from abtest_core.srm import srm_check
+from abtest_core.cuped import estimate_theta, apply_cuped
 
 from bandit.strategies import thompson_sampling, ucb1, epsilon_greedy
 

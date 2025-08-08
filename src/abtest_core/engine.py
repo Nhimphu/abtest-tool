@@ -8,6 +8,7 @@ from .types import AnalysisConfig
 from .stats_binomial import prop_diff_test
 from .stats_continuous import welch_ttest, yuen_trimmed_mean_test, bootstrap_bca_ci
 from .stats_ratio import ratio_test
+from .cuped import estimate_theta, apply_cuped
 
 
 @dataclass
@@ -26,9 +27,29 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
         raise ValueError("exactly two groups required")
     mask1 = df["group"] == groups[0]
     mask2 = df["group"] == groups[1] if len(groups) > 1 else ~mask1
+    notes = []
+    if config.use_cuped:
+        pre_col = config.preperiod_metric_col
+        if not pre_col or pre_col not in df.columns:
+            notes.append("CUPED skipped: pre-period column missing")
+        else:
+            mask_complete = df[pre_col].notna() & df["metric"].notna()
+            if mask_complete.sum() < 10:
+                notes.append("CUPED skipped: insufficient pre-period data")
+            else:
+                pre = df.loc[mask_complete, pre_col]
+                post = df.loc[mask_complete, "metric"]
+                corr = np.corrcoef(pre, post)[0, 1]
+                if np.isnan(corr) or abs(corr) < 0.1:
+                    notes.append("CUPED skipped: low correlation")
+                else:
+                    stats = estimate_theta(pre, post)
+                    df.loc[mask_complete, "metric"] = apply_cuped(post, pre, stats["theta"])
+                    notes.append(
+                        f"CUPED theta={stats['theta']:.4g}, variance reduction≈{stats['variance_reduction_pct']:.1f}%"
+                    )
     g1 = df.loc[mask1, "metric"]
     g2 = df.loc[mask2, "metric"]
-    notes = []
     if config.metric_type == "binomial":
         x1, n1 = g1.sum(), g1.count()
         x2, n2 = g2.sum(), g2.count()
