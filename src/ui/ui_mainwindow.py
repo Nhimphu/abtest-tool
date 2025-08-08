@@ -1010,9 +1010,6 @@ class ABTestWindow(QMainWindow):
         add_ds = QAction(self.tr("Add Data Source"), self)
         add_ds.triggered.connect(self._on_add_data_source)
         fm.addAction(add_ds)
-        quick = QAction(self.tr("Quick AB Test"), self)
-        quick.triggered.connect(self._open_quick_ab_test)
-        fm.addAction(quick)
         oneclick = QAction(self.tr("One-click AB"), self)
         oneclick.triggered.connect(self._run_one_click_ab)
         fm.addAction(oneclick)
@@ -1043,6 +1040,11 @@ class ABTestWindow(QMainWindow):
         ru_act.triggered.connect(lambda: self.set_language("ru"))
         lang_menu.addAction(en_act)
         lang_menu.addAction(ru_act)
+
+        wiz_menu = mb.addMenu(self.tr("ui.wizard.menu"))
+        new_wiz = QAction(self.tr("ui.wizard.new"), self)
+        new_wiz.triggered.connect(self._open_analysis_wizard)
+        wiz_menu.addAction(new_wiz)
 
         # Language & theme switch
         cw = QWidget()
@@ -1570,25 +1572,14 @@ class ABTestWindow(QMainWindow):
             self.sources.append(dlg.data())
             QMessageBox.information(self, "Info", "Data source added")
 
-    def _open_quick_ab_test(self):
-        """Launch the quick A/B test wizard."""
+    def _open_analysis_wizard(self):
+        """Launch the multi-step analysis wizard."""
         try:
-            from .wizard import QuickABTestWizard
+            from .wizard import Wizard
         except Exception:
             return
-        wiz = QuickABTestWizard(self)
-        res = getattr(wiz, "exec", lambda: 0)()
-        if res:
-            data = wiz.data()
-            msg = (
-                f"{self.tr('Flag')}: {data['flag']}\n"
-                f"{self.tr('Metric')}: {data['primary_metric']}\n"
-                f"{self.tr('Sequential')}={data['sequential']} "
-                f"{self.tr('CUPED')}={data['cuped']} "
-                f"{self.tr('SRM')}={data['srm']}"
-            )
-            self.show_results(f"<pre>{msg}</pre>")
-            self._add_history("Quick AB Test", f"<pre>{msg}</pre>")
+        wiz = Wizard(self)
+        getattr(wiz, "show", lambda: None)()
 
     def _run_one_click_ab(self):
         """Run a preconfigured A/B test without user input."""

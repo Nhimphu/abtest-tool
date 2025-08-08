@@ -15,6 +15,7 @@ if __package__ is None:
     sys.path.append(str(Path(__file__).resolve().parents[1]))
 
 from ui.ui_mainwindow import ABTestWindow
+from ui.wizard import Wizard  # ensure wizard is packaged
 from utils.config import config
 
 
