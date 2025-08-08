@@ -10,6 +10,7 @@ from .stats_continuous import welch_ttest, yuen_trimmed_mean_test, bootstrap_bca
 from .stats_ratio import ratio_test
 from .cuped import estimate_theta, apply_cuped
 from .sequential import make_plan, sequential_test
+from .bayes import prob_win_binomial, prob_win_continuous
 
 
 @dataclass
@@ -53,12 +54,15 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
                     )
     g1 = df.loc[mask1, "metric"]
     g2 = df.loc[mask2, "metric"]
+    bres = None
     if config.metric_type == "binomial":
         x1, n1 = g1.sum(), g1.count()
         x2, n2 = g2.sum(), g2.count()
         res = prop_diff_test(int(x1), int(n1), int(x2), int(n2), alpha=config.alpha, sided=config.sided)
         p_value, effect, ci = res["p_value"], res["effect"], res["ci"]
         notes.append(res["method"])
+        if getattr(config, "use_bayes", False):
+            bres = prob_win_binomial(int(x1), int(n1), int(x2), int(n2), a0=1, b0=1, rope=getattr(config, "bayes_rope", None))
     elif config.metric_type == "continuous":
         if config.robust:
             res = yuen_trimmed_mean_test(g1.to_numpy(), g2.to_numpy(), alpha=config.alpha, sided=config.sided)
@@ -68,6 +72,13 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
             res = welch_ttest(mean1, var1, n1, mean2, var2, n2, sided=config.sided, alpha=config.alpha)
         p_value, effect, ci = res["p_value"], res["effect"], res["ci"]
         notes.append(res["notes"])
+        if getattr(config, "use_bayes", False):
+            bres = prob_win_continuous(
+                g1.to_numpy(),
+                g2.to_numpy(),
+                rope=getattr(config, "bayes_rope", None),
+                draws=getattr(config, "bayes_draws", 10000),
+            )
         if config.bootstrap:
             ci = bootstrap_bca_ci(g1.to_numpy(), g2.to_numpy(), lambda a, b: np.mean(b) - np.mean(a), alpha=config.alpha)
             notes.append("bootstrap_bca")
@@ -77,8 +88,21 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
         res = ratio_test(mean1, var1, n1, mean2, var2, n2, alpha=config.alpha, sided=config.sided, fieller=config.use_fieller)
         p_value, effect, ci = res["p_value"], res["effect"], res["ci"]
         notes.append(res["notes"])
+        if getattr(config, "use_bayes", False):
+            bres = prob_win_continuous(
+                g1.to_numpy(),
+                g2.to_numpy(),
+                rope=getattr(config, "bayes_rope", None),
+                draws=getattr(config, "bayes_draws", 10000),
+            )
     else:
         raise ValueError("unknown metric type")
+    if bres is not None:
+        meta["bayes"] = bres
+        msg = f"Bayes: P(B>A)≈{bres['p_win']:.3f}"
+        if bres.get("p_rope") is not None:
+            msg += f", P(diff∈ROPE)≈{bres['p_rope']:.3f}"
+        notes.append(msg)
     if getattr(config, "use_sequential", False):
         k = max(1, int(getattr(config, "sequential_looks", 5)))
         preset = (getattr(config, "sequential_preset", "pocock") or "pocock")
