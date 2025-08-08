@@ -12,8 +12,8 @@ from flask_jwt_extended import (
 )
 from flask_swagger_ui import get_swaggerui_blueprint
 import pandas as pd
-from stats.ab_test import evaluate_abn_test
 from abtest_core.srm import SrmCheckFailed
+from abtest_core import AnalysisConfig, analyze_groups
 from prometheus_client import (
     CollectorRegistry,
     Counter,
@@ -105,18 +105,28 @@ def create_app() -> Flask:
                 return jsonify(e.to_dict()), 400
 
         try:
-            res = evaluate_abn_test(
-                data["users_a"],
-                data["conv_a"],
-                data["users_b"],
-                data["conv_b"],
-                metrics=data.get("metrics", 1),
-                alpha=data.get("alpha", 0.05),
-                force_run_when_srm_failed=data.get("force_run_when_srm_failed", False),
+            users_a, conv_a = data["users_a"], data["conv_a"]
+            users_b, conv_b = data["users_b"], data["conv_b"]
+            df = pd.DataFrame(
+                {
+                    "group": ["A"] * users_a + ["B"] * users_b,
+                    "metric": [1] * conv_a + [0] * (users_a - conv_a) + [1] * conv_b + [0] * (users_b - conv_b),
+                }
             )
+            config = AnalysisConfig(alpha=data.get("alpha", 0.05), metric_type="binomial")
+            res = analyze_groups(df, config)
         except SrmCheckFailed as e:
             return jsonify(e.to_dict()), 400
-        return jsonify(res)
+        return jsonify(
+            {
+                "cr_a": conv_a / users_a,
+                "cr_b": conv_b / users_b,
+                "p_value_ab": res.p_value,
+                "effect": res.effect,
+                "ci": res.ci,
+                "method_notes": res.method_notes,
+            }
+        )
 
     @app.route("/spec", methods=["GET"])
     def spec():
