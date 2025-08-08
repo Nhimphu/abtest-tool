@@ -4,13 +4,24 @@ from typing import Tuple
 import numpy as np
 from numpy import linspace
 
-try:  # make ``linspace`` available for tests using it without qualification
+
+class _ArrMeta(type):
+    def __call__(cls, *args, **kwargs):
+        return np.array(*args, **kwargs)
+
+    def __instancecheck__(cls, instance):  # pragma: no cover - simple delegation
+        return isinstance(instance, np.ndarray)
+
+
+class Arr(metaclass=_ArrMeta):
+    """Callable type compatible with ``isinstance(x, Arr)`` and ``Arr(iterable)``."""
+
+
+try:  # expose convenience names for tests
     import builtins  # pragma: no cover - trivial import
 
-    if not hasattr(builtins, "linspace"):
-        builtins.linspace = linspace
-    if not hasattr(builtins, "Arr"):
-        builtins.Arr = np.ndarray
+    builtins.linspace = linspace
+    builtins.Arr = Arr
 except Exception:  # pragma: no cover - best effort only
     pass
 
