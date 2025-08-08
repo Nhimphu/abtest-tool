@@ -1,0 +1,5 @@
+user_id,group,metric,pre
+1,A,1,10
+2,A,0,9
+3,B,1,8
+4,B,0,7
