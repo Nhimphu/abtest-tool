@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Shared state for the analysis wizard."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Step 3: run analysis asynchronously and show results."""
 from __future__ import annotations
 

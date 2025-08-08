@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Main wizard window composed of three steps."""
 from __future__ import annotations
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Step 2: configure analysis options and run SRM gate."""
 from __future__ import annotations
 

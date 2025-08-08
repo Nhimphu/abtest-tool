@@ -23,3 +23,4 @@ def fill(path: Path) -> None:
 
 if __name__ == '__main__':
     fill(Path('translations/app_ru.ts'))
+    fill(Path('translations/app_en.ts'))

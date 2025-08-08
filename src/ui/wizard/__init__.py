@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from .wizard import Wizard
 from .viewmodel import WizardViewModel
 

@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 """Step 1: load data and map columns."""
 from __future__ import annotations
 

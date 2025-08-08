@@ -22,21 +22,11 @@ jobs:
       - name: Run integration tests
         run: |
           poetry run pytest -q tests/test_api_integration.py
-      - name: Install Qt translation tools
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y qt6-tools-dev-tools qttools5-dev-tools
-          if ! command -v lrelease >/dev/null; then
-            # Создаём алиас на lrelease-qt6 или lrelease-qt5
-            sudo ln -s $(which lrelease-qt6 || which lrelease-qt5) /usr/local/bin/lrelease
-          fi
       - name: Build translations
         run: |
-          poetry run pylupdate6 src/ui/ui_mainwindow.py src/ui/wizard.py src/main.py \
-            -ts translations/app_ru.ts
+          poetry run bash scripts/update_translations.sh
           poetry run python scripts/fill_translations.py
-          lrelease translations/app_ru.ts -qm translations/app_ru.qm
-          if grep -q 'type="unfinished"' translations/app_ru.ts; then
+          if grep -q 'type="unfinished"' translations/app_ru.ts translations/app_en.ts; then
             echo "Untranslated strings found"
             exit 1
           fi
