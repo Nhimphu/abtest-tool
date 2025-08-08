@@ -9,6 +9,8 @@ try:  # make ``linspace`` available for tests using it without qualification
 
     if not hasattr(builtins, "linspace"):
         builtins.linspace = linspace
+    if not hasattr(builtins, "Arr"):
+        builtins.Arr = np.ndarray
 except Exception:  # pragma: no cover - best effort only
     pass
 
