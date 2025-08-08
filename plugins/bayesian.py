@@ -3,7 +3,11 @@ from typing import Tuple
 from collections.abc import Iterable, Iterator
 
 import numpy as np
-from numpy import linspace
+
+
+def linspace(start: float, stop: float, num: int):
+    """Return a list of evenly spaced floats from ``start`` to ``stop``."""
+    return [float(v) for v in np.linspace(start, stop, num)]
 
 
 class _ArrMeta(type):
@@ -31,17 +35,16 @@ class Arr(metaclass=_ArrMeta):
     """Callable type: Arr(iterable)->np.array(materialized). Usable in ``isinstance`` checks."""
 
 
+def trapz(y, x):
+    """Wrapper around ``np.trapezoid`` returning a Python float."""
+    return float(np.trapezoid(y, x))
+
+
 try:  # expose convenience names for tests
     import builtins  # pragma: no cover - trivial import
 
-    if not hasattr(builtins, "linspace"):
-        builtins.linspace = linspace
+    builtins.linspace = linspace
     builtins.Arr = Arr
-    from numpy import trapezoid as _trapezoid
-
-    def trapz(y, x):
-        return float(_trapezoid(y, x))
-
     builtins.trapz = trapz
 except Exception:  # pragma: no cover - best effort only
     pass
