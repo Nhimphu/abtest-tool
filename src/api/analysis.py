@@ -11,6 +11,7 @@ from flask_jwt_extended import (
     jwt_required,
 )
 from flask_swagger_ui import get_swaggerui_blueprint
+import pandas as pd
 from stats.ab_test import evaluate_abn_test
 from prometheus_client import (
     CollectorRegistry,
@@ -20,6 +21,7 @@ from prometheus_client import (
     CONTENT_TYPE_LATEST,
 )
 from metrics import track_time
+from abtest_core import DataSchema, validate_dataframe, ValidationError
 
 
 def create_app() -> Flask:
@@ -90,6 +92,17 @@ def create_app() -> Flask:
     @track_time
     def run_abtest():
         data = request.get_json(force=True)
+
+        # Optional dataframe validation if raw rows are provided
+        if "rows" in data and "schema" in data:
+            df = pd.DataFrame(data["rows"])
+            schema = DataSchema(**data["schema"])
+            nan_policy = data.get("nan_policy", "drop")
+            try:
+                validate_dataframe(df, schema, nan_policy=nan_policy)
+            except ValidationError as e:
+                return jsonify(e.to_dict()), 400
+
         res = evaluate_abn_test(
             data["users_a"],
             data["conv_a"],
