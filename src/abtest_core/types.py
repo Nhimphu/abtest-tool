@@ -1,7 +1,7 @@
 """Typed configuration models used across analysis core."""
 from __future__ import annotations
 
-from typing import Literal, Optional, List
+from typing import Literal, Optional
 
 from pydantic import BaseModel
 
@@ -27,11 +27,11 @@ class AnalysisConfig(BaseModel):
     use_sequential: bool = False
     sequential_preset: Optional[Literal["pocock", "obf"]] = None
     sequential_looks: int = 5
-    sequential_history_p: List[float] = []  # optional, allow external history
+    sequential_history_p: list[float] = []  # optional, allow external history
     nan_policy: Literal["drop", "zero", "error"] = "drop"
     metric_type: MetricType
-    segments: List[str] = []
-    multiple_testing: Literal["none", "holm", "bonferroni", "by"] = "holm"
+    segments: list[str] = []
+    multiple_testing: Literal["none", "holm", "by"] = "holm"
     robust: bool = False
     bootstrap: bool = False
     use_fieller: bool = False
