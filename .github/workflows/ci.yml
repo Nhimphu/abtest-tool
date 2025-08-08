@@ -9,10 +9,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.12'
       - uses: snok/install-poetry@v1
+      - name: Use Python 3.12 for poetry venv
+        run: poetry env use python3.12
+      - name: Refresh lockfile
+        run: poetry lock --no-update
       - name: Install dependencies
         run: |
           poetry install --no-interaction --with dev

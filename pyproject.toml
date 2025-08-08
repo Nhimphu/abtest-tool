@@ -28,7 +28,7 @@ include = [
 ]
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = ">=3.11,<3.13"
 numpy = "2.2.0"
 scipy = "1.13.0"
 matplotlib = "3.10.3"
@@ -55,7 +55,7 @@ coverage = "7.5.0"
 coverage-badge = "1.1.0"
 sphinx = "7.2.6"
 myst-parser = "2.0.0"
-PySide6 = "6.7.2"
+PySide6 = { version = "^6.7.2", python = ">=3.11,<3.13" }
 
 [tool.poetry.scripts]
 abtest-tool = "main:main"
