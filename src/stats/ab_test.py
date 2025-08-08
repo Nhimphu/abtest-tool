@@ -13,6 +13,7 @@ if SRC_DIR not in sys.path:
 
 from metrics import track_time
 import plugin_loader
+from abtest_core.srm import srm_check, SrmCheckFailed
 
 logger = logging.getLogger(__name__)
 
@@ -218,6 +219,7 @@ def evaluate_abn_test(
     conv_c: Optional[int] = None,
     metrics: int = 1,
     alpha: float = 0.05,
+    force_run_when_srm_failed: bool = False,
 ):
     """A/B/n тест с поправкой FDR (Benjamini–Hochberg)."""
     if users_a <= 0 or users_b <= 0:
@@ -230,6 +232,13 @@ def evaluate_abn_test(
         raise ValueError("Количество конверсий B должно быть от 0 до users_b")
     if users_c is not None and conv_c is not None and not (0 <= conv_c <= users_c):
         raise ValueError("Количество конверсий C должно быть от 0 до users_c")
+
+    counts = {"A": users_a, "B": users_b}
+    if users_c is not None:
+        counts["C"] = users_c
+    srm_res = srm_check(counts)
+    if not srm_res["passed"] and not force_run_when_srm_failed:
+        raise SrmCheckFailed(srm_res)
 
     if users_a == users_b and conv_a == conv_b and users_c is None and conv_c is None:
         logger.info("Trivial A/A case detected; returning baseline result")
@@ -252,8 +261,10 @@ def evaluate_abn_test(
         p_adj = min(1.0 * m, 1.0)
         trivial["p_value_fdr"] = p_adj
         trivial["significant_fdr"] = False
+        trivial["srm"] = srm_res
         return trivial
     res = _evaluate_abn_test(users_a, conv_a, users_b, conv_b, users_c, conv_c, alpha=alpha)
+    res["srm"] = srm_res
     p = res["p_value_ab"]
     m = max(1, int(metrics))
     p_adj = min(p * m, 1.0)
@@ -341,16 +352,6 @@ def cuped_adjustment(x: List[float], covariate: List[float]):
         return x
     theta = cov / var_c
     return [xi - theta * ci for xi, ci in zip(x, c)]
-
-
-def srm_check(users_a: int, users_b: int, alpha: float = 0.05):
-    """Simple SRM check using chi-square test."""
-    total = users_a + users_b
-    expected = total / 2
-    chi_sq = ((users_a - expected) ** 2) / expected + ((users_b - expected) ** 2) / expected
-    val = chi_sq.item() if hasattr(chi_sq, "item") else chi_sq
-    p = 1 - chi2.cdf(val, df=1)
-    return p < alpha, p
 
 
 def pocock_alpha_curve(alpha: float, looks: int):

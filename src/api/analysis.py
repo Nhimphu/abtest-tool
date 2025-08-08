@@ -13,6 +13,7 @@ from flask_jwt_extended import (
 from flask_swagger_ui import get_swaggerui_blueprint
 import pandas as pd
 from stats.ab_test import evaluate_abn_test
+from abtest_core.srm import SrmCheckFailed
 from prometheus_client import (
     CollectorRegistry,
     Counter,
@@ -103,14 +104,18 @@ def create_app() -> Flask:
             except ValidationError as e:
                 return jsonify(e.to_dict()), 400
 
-        res = evaluate_abn_test(
-            data["users_a"],
-            data["conv_a"],
-            data["users_b"],
-            data["conv_b"],
-            metrics=data.get("metrics", 1),
-            alpha=data.get("alpha", 0.05),
-        )
+        try:
+            res = evaluate_abn_test(
+                data["users_a"],
+                data["conv_a"],
+                data["users_b"],
+                data["conv_b"],
+                metrics=data.get("metrics", 1),
+                alpha=data.get("alpha", 0.05),
+                force_run_when_srm_failed=data.get("force_run_when_srm_failed", False),
+            )
+        except SrmCheckFailed as e:
+            return jsonify(e.to_dict()), 400
         return jsonify(res)
 
     @app.route("/spec", methods=["GET"])
@@ -146,6 +151,7 @@ def create_app() -> Flask:
                             "conv_b": {"type": "integer"},
                             "metrics": {"type": "integer"},
                             "alpha": {"type": "number"},
+                            "force_run_when_srm_failed": {"type": "boolean"},
                         },
                         "required": ["users_a", "conv_a", "users_b", "conv_b"],
                     },
