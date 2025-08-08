@@ -19,11 +19,15 @@ class AnalysisResult:
 
 
 def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
-    groups = df["group"].unique()
+    if not isinstance(df, pd.DataFrame):
+        df = pd.DataFrame(df)
+    groups = list(pd.unique(df["group"]))
     if len(groups) != 2:
         raise ValueError("exactly two groups required")
-    g1 = df[df["group"] == groups[0]]["metric"]
-    g2 = df[df["group"] == groups[1]]["metric"]
+    mask1 = df["group"] == groups[0]
+    mask2 = df["group"] == groups[1] if len(groups) > 1 else ~mask1
+    g1 = df.loc[mask1, "metric"]
+    g2 = df.loc[mask2, "metric"]
     notes = []
     if config.metric_type == "binomial":
         x1, n1 = g1.sum(), g1.count()
