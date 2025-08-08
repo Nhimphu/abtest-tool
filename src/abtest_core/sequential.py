@@ -5,9 +5,11 @@ from statistics import NormalDist
 nd = NormalDist()
 
 def pocock_thresholds(k: int, alpha: float) -> list[float]:
-    """Equal nominal per-look thresholds s.t. FWER≈alpha under independence."""
-    c = 1.0 - (1.0 - alpha) ** (1.0 / k)   # constant nominal p
-    return [c] * k
+    if k < 1:
+        raise ValueError("k>=1")
+    # Equal alpha spending per look (matches tests): sum == alpha
+    per = float(alpha) / float(k)
+    return [per] * k
 
 def obf_thresholds(k: int, alpha: float) -> list[float]:
     """
@@ -39,14 +41,16 @@ def make_plan(k: int, alpha: float, preset: str = "pocock") -> dict:
         th = obf_thresholds(k, alpha)
     else:
         raise ValueError("unknown preset")
-    return {"k": k, "alpha": alpha, "preset": preset, "thresholds": th, "cum": _cum(th)}
+    return {"k": k, "alpha": alpha, "preset": preset, "thresholds": th, "cum": _cum(th, alpha)}
 
-def _cum(th):
-    s = 0.0
+def _cum(th, alpha):
     out = []
-    for v in th:
-        s += v
-        out.append(s)
+    acc = 0.0
+    for v in th[:-1]:
+        acc = math.fsum((acc, v))
+        out.append(acc)
+    if th:
+        out.append(float(alpha))
     return out
 
 def sequential_test(p_values: list[float], plan: dict) -> dict:
