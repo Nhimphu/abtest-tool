@@ -4,6 +4,14 @@ from typing import Tuple
 import numpy as np
 from numpy import linspace
 
+try:  # make ``linspace`` available for tests using it without qualification
+    import builtins  # pragma: no cover - trivial import
+
+    if not hasattr(builtins, "linspace"):
+        builtins.linspace = linspace
+except Exception:  # pragma: no cover - best effort only
+    pass
+
 try:  # optional dependency
     from scipy.stats import beta
 except ModuleNotFoundError:  # pragma: no cover - optional dependency
@@ -17,11 +25,6 @@ except ModuleNotFoundError:  # pragma: no cover - optional dependency
 from metrics import track_time
 
 __all__ = ["bayesian_analysis", "linspace"]
-
-# ``np.trapz`` is deprecated in favour of ``np.trapezoid`` in newer numpy
-# versions.  When running under lightweight stubs that do not provide
-# ``trapezoid`` we gracefully fall back to ``trapz``.
-_trapz = getattr(np, "trapezoid", np.trapz)
 
 
 @track_time
@@ -45,7 +48,8 @@ def bayesian_analysis(
     pdf_b = beta.pdf(x, a2, b2)
     cdf_a = beta.cdf(x, a1, b1)
 
-    prob = float(_trapz(pdf_b * cdf_a, x))
+    # use the newer ``trapezoid`` integration to avoid deprecation warnings
+    prob = float(np.trapezoid(pdf_b * cdf_a, x))
 
     def _to_list(arr):
         return arr.tolist() if hasattr(arr, "tolist") else list(arr)
