@@ -5,6 +5,7 @@ import numpy as np
 import pandas as pd
 
 from .types import AnalysisConfig
+from .multiple import holm, benjamini_yekutieli
 from .stats_binomial import prop_diff_test
 from .stats_continuous import welch_ttest, yuen_trimmed_mean_test, bootstrap_bca_ci
 from .stats_ratio import ratio_test
@@ -20,6 +21,7 @@ class AnalysisResult:
     ci: Tuple[float, float]
     method_notes: str = ""
     meta: Optional[dict] = None
+    segments: Optional[list[dict]] = None
 
 
 def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
@@ -122,4 +124,45 @@ def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
             f"p≤{plan['thresholds'][decision['look']-1]:.4g} at this look; "
             f"spent≈{decision['spent_alpha_cum']:.4g}."
         )
-    return AnalysisResult(p_value=p_value, effect=effect, ci=ci, method_notes=", ".join(notes), meta=meta or None)
+    segments_res: list[dict] | None = None
+    if getattr(config, "segments", None):
+        segments_res = []
+        pvals: list[float] = []
+        seg_cfg = AnalysisConfig(**config.__dict__)
+        seg_cfg.segments = []
+        seg_cfg.multiple_testing = "none"
+        for col in config.segments:
+            if col not in df.columns:
+                continue
+            for val, sdf in df.groupby(col):
+                seg_res = analyze_groups(sdf, seg_cfg)
+                segments_res.append(
+                    {
+                        "segment": {"col": col, "val": val},
+                        "p_raw": seg_res.p_value,
+                        "effect": seg_res.effect,
+                        "n": len(sdf),
+                    }
+                )
+                pvals.append(seg_res.p_value)
+        if segments_res:
+            if config.multiple_testing == "holm":
+                p_adj = holm(pvals)
+            elif config.multiple_testing == "by":
+                p_adj = benjamini_yekutieli(pvals)
+            else:
+                p_adj = pvals
+            for seg, adj in zip(segments_res, p_adj):
+                seg["p_adj"] = adj
+            notes.append(
+                f"Multiple testing: {config.multiple_testing.upper()} on {len(pvals)} comparisons"
+            )
+
+    return AnalysisResult(
+        p_value=p_value,
+        effect=effect,
+        ci=ci,
+        method_notes=", ".join(notes),
+        meta=meta or None,
+        segments=segments_res,
+    )
