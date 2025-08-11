@@ -150,7 +150,10 @@ import csv
 from typing import Dict
 import json
 import urllib.request
+from utils.net import urlopen_checked
 from abtest_core.utils import lazy_import
+
+logger = logging.getLogger(__name__)
 
 try:
     from plugins.bayesian import bayesian_analysis  # for tests monkeypatch
@@ -331,8 +334,8 @@ class AddDataSourceDialog:
             try:
                 self._dialog.setPalette(parent.palette())
                 self._dialog.setStyleSheet(parent.styleSheet())
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("ui_mainwindow: optional styling failed: %s", e)
         try:
             layout = QVBoxLayout_cls(self._dialog)
         except Exception:
@@ -1258,8 +1261,8 @@ class ABTestWindow(QMainWindow):
                     self.results_text.append(
                         f"<br><img src='data:image/png;base64,{img}'/>"
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug("ui_mainwindow: optional styling failed: %s", e)
 
     # ----- auth -----
     def authenticate(self):
@@ -1298,7 +1301,7 @@ class ABTestWindow(QMainWindow):
             headers={"Content-Type": "application/json"},
         )
         try:
-            with urllib.request.urlopen(req, timeout=5) as resp:
+            with urlopen_checked(req, timeout=5) as resp:
                 js = json.loads(resp.read().decode())
                 return js.get("access_token"), js.get("refresh_token")
         except Exception:

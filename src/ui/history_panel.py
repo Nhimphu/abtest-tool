@@ -6,9 +6,12 @@ import json
 import sqlite3
 from datetime import datetime
 from typing import Any, Dict, List
+import logging
 
 from migrations_runner import run_migrations
 from utils.config import config
+
+logger = logging.getLogger(__name__)
 
 try:
     from PyQt6.QtWidgets import (
@@ -174,8 +177,8 @@ class HistoryPanel(QWidget):
         ts = ""
         try:
             ts = QDateTime.currentDateTime().toString()
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("history_panel: failed to format timestamp: %s", e)
         c = self.conn.cursor()
         c.execute(
             "INSERT INTO session_states(payload, timestamp) VALUES(?,?)",
@@ -220,13 +223,13 @@ class HistoryPanel(QWidget):
 
             qr = pyqrcode.create(link)
             qr_text = qr.terminal(quiet_zone=1)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("history_panel: QR generation failed: %s", e)
         msg = link if not qr_text else f"{link}\n{qr_text}"
         try:
             QMessageBox.information(self, "Share", msg)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("history_panel: share dialog failed: %s", e)
         return link
 
     def load_from_link(self, link: str) -> None:
