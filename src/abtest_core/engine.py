@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
 
 from abtest_tool.backends import get_backend
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from .types import AnalysisConfig
 from .multiple import holm, benjamini_yekutieli
