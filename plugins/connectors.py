@@ -1,22 +1,26 @@
 """Data source connectors for BigQuery and Redshift.
 
 Both connectors rely on the official client libraries. They are imported
-inside the initializer so that the optional dependencies are only required
-when a particular connector is used.
+on demand so that the optional dependencies are only required when a
+particular connector is used.
 """
 
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Set
+
+from abtest_tool.backends import get_backend
 from utils.connectors import register_connector
+
+ABI_VERSION = "1.0"
+name = "connectors"
+version = "0.1"
+capabilities: Set[str] = {"dwh"}
 
 
 class BigQueryConnector:
     """Simple wrapper around the BigQuery client."""
 
     def __init__(self, project: str, credentials_path: str) -> None:
-        try:
-            from google.cloud import bigquery  # type: ignore
-        except Exception:  # pragma: no cover - optional dependency
-            raise ImportError("google-cloud-bigquery is required for BigQueryConnector")
+        bigquery = get_backend("google.cloud.bigquery")
         self._client = bigquery.Client.from_service_account_json(credentials_path, project=project)
 
     def query(self, sql: str) -> List[Dict[str, Any]]:
@@ -25,17 +29,14 @@ class BigQueryConnector:
 
     def close(self) -> None:
         """BigQuery client does not require explicit close but provided for API consistency."""
-        pass
+        return None
 
 
 class RedshiftConnector:
     """Redshift connector using the official ``redshift-connector`` package."""
 
     def __init__(self, host: str, port: int, database: str, user: str, password: str) -> None:
-        try:
-            import redshift_connector  # type: ignore
-        except Exception:  # pragma: no cover - optional dependency
-            raise ImportError("redshift-connector is required for RedshiftConnector")
+        redshift_connector = get_backend("redshift_connector")
         self._conn = redshift_connector.connect(
             host=host,
             port=port,
@@ -55,7 +56,13 @@ class RedshiftConnector:
         self._conn.close()
 
 
-register_connector("bigquery", BigQueryConnector)
-register_connector("redshift", RedshiftConnector)
+def register(app: Any) -> None:  # noqa: D401 - simple delegation
+    """Register connectors in the global registry."""
+    register_connector("bigquery", BigQueryConnector)
+    register_connector("redshift", RedshiftConnector)
 
-__all__ = ["BigQueryConnector", "RedshiftConnector"]
+
+# Automatically register when imported
+register(None)
+
+__all__ = ["BigQueryConnector", "RedshiftConnector", "register"]

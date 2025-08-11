@@ -4,7 +4,10 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-import pandas as pd
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:  # pragma: no cover - used only for type checking
+    import pandas as pd
 
 from .types import DataSchema, MetricType
 
@@ -86,7 +89,7 @@ def validate_dataframe(
     return df
 
 
-def infer_metric_type(df: pd.DataFrame, metric_col: str) -> MetricType:
+def infer_metric_type(df: "pd.DataFrame", metric_col: str) -> MetricType:
     """Infer metric type from column values."""
     unique = set(df[metric_col].dropna().unique())
     if unique.issubset({0, 1}):

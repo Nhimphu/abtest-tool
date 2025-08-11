@@ -5,7 +5,7 @@ try:
 except Exception as e:  # pragma: no cover - optional dependency
     raise ImportError("pandas is required for cumulative plots") from e
 
-import plotly.graph_objects as go
+from abtest_tool.backends import get_backend
 
 
 def plot_cumulative_conversion(data: pd.DataFrame) -> go.Figure:
@@ -31,6 +31,7 @@ def plot_cumulative_conversion(data: pd.DataFrame) -> go.Figure:
     df["obs_cum"] = df.groupby("group").cumcount() + 1
     df["cr"] = df["conv_cum"] / df["obs_cum"]
 
+    go = get_backend("plotly.graph_objects")
     fig = go.Figure()
     for grp, gdf in df.groupby("group"):
         fig.add_trace(
