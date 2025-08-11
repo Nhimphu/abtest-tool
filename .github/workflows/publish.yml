@@ -12,12 +12,15 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - uses: snok/install-poetry@v1
-      - name: Install dependencies
-        run: poetry install --no-root
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Check pyproject
+        run: poetry check
+      - name: Install deps from lock (dev group) and sync env
+        run: poetry install --no-interaction --with dev --sync
       - name: Build
         run: poetry build
       - name: Publish package

@@ -9,13 +9,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - uses: snok/install-poetry@v1
-      - name: Install dependencies
-        run: |
-          poetry install --no-interaction --with dev
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Check pyproject
+        run: poetry check
+      - name: Install deps from lock (dev group) and sync env
+        run: poetry install --no-interaction --with dev --sync
       - name: Run unit tests
         run: |
           poetry run coverage run -m pytest -q --ignore=tests/test_api_integration.py
@@ -30,16 +32,8 @@ jobs:
             # Создаём алиас на lrelease-qt6 или lrelease-qt5
             sudo ln -s $(which lrelease-qt6 || which lrelease-qt5) /usr/local/bin/lrelease
           fi
-      - name: Build translations
-        run: |
-          poetry run pylupdate6 src/ui/ui_mainwindow.py src/ui/wizard.py src/main.py \
-            -ts translations/app_ru.ts
-          poetry run python scripts/fill_translations.py
-          lrelease translations/app_ru.ts -qm translations/app_ru.qm
-          if grep -q 'type="unfinished"' translations/app_ru.ts; then
-            echo "Untranslated strings found"
-            exit 1
-          fi
+      - name: Update translations
+        run: poetry run bash scripts/update_translations.sh
       - name: Build documentation
         run: |
           poetry run sphinx-build -b html -W docs docs/_build/html

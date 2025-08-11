@@ -14,14 +14,15 @@ jobs:
       id-token: write
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install poetry
-          poetry install --no-interaction --with dev
+          python-version: "3.12"
+      - name: Install Poetry
+        run: pipx install poetry
+      - name: Check pyproject
+        run: poetry check
+      - name: Install deps from lock (dev group) and sync env
+        run: poetry install --no-interaction --with dev --sync
       - name: Build docs
         run: |
           poetry run sphinx-build -b html -W docs docs/_build/html
