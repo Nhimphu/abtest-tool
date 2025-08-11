@@ -5,31 +5,27 @@ description = "GUI tool for A/B testing and sample size calculations"
 authors = ["Nhimphu <nhimphu@example.com>"]
 readme = "README.md"
 packages = [
-    { include = "abtest_core", from = "src" },
-    { include = "api", from = "src" },
-    { include = "bandit", from = "src" },
-    { include = "plots", from = "src" },
-    { include = "stats", from = "src" },
-    { include = "ui", from = "src" },
-    { include = "utils", from = "src" },
-    { include = "plugins", from = "." }
+    { include = "*", from = "src" }
 ]
 exclude = [
     "tests/**",
+    ".github/**",
     "docs/**",
-    "scripts/**",
-    ".github/**"
+    "examples/**",
+    "build/**",
+    "dist/**",
+    "src/pd_stub/**"
 ]
 include = [
     { path = "translations/**", format = "wheel" },
-    { path = "translations/**", format = "sdist" }
+    { path = "translations/**", format = "sdist" },
+    { path = "spec/**", format = "wheel" },
+    { path = "spec/**", format = "sdist" }
 ]
 
 [tool.poetry.dependencies]
 python = ">=3.11,<3.13"
 numpy = "2.2.0"
-scipy = "1.13.0"
-matplotlib = "3.10.3"
 plotly = "6.2.0"
 pillow = "10.4.0"
 pandas = "2.2.2"
@@ -41,12 +37,25 @@ pytz = "2025.2"
 setuptools = "80.9.0"
 tzdata = "2025.2"
 Flask = "3.0.3"
-flask-swagger-ui = "4.11.1"
 Flask-JWT-Extended = "4.6.0"
+flask-swagger-ui = "4.11.1"
 prometheus-client = "0.20.0"
-SQLAlchemy = "2.0.30"
 alembic = "1.13.1"
 pydantic = "1.10.9"
+matplotlib = { version = "3.10.3", optional = true }
+scipy = { version = "1.13.0", optional = true }
+sqlalchemy = { version = "2.0.30", optional = true }
+statsmodels = { version = "*", optional = true }
+psycopg2-binary = { version = "*", optional = true }
+pymysql = { version = "*", optional = true }
+uvicorn = { version = "*", optional = true }
+gunicorn = { version = "*", optional = true }
+
+[tool.poetry.extras]
+viz = ["matplotlib"]
+sci = ["scipy", "statsmodels"]
+db = ["sqlalchemy", "psycopg2-binary", "pymysql"]
+web = ["uvicorn", "gunicorn"]
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.1.1"
@@ -55,6 +64,11 @@ coverage-badge = "1.1.0"
 sphinx = "7.2.6"
 myst-parser = "2.0.0"
 PySide6 = { version = "^6.7.2", python = ">=3.11,<3.13" }
+ruff = "^0.5"
+mypy = "^1.10"
+pytest-benchmark = "^4.0"
+hypothesis = "^6.112"
+bandit = "^1.7"
 
 [tool.poetry.scripts]
 abtest-tool = "main:main"
