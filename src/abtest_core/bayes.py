@@ -86,7 +86,7 @@ def prob_win_binomial(
     b0: float = 1,
     rope: Optional[Tuple[float, float]] = None,
     grid: int = 2000,
-) -> Dict[str, Optional[float]]:
+) -> Dict[str, Any]:
     """Probability B wins for binomial metrics with optional ROPE."""
     np = lazy_import("numpy")
     a1, b1 = beta_post(a0, b0, x1, n1)
@@ -119,7 +119,7 @@ def prob_win_continuous(
     rope: Optional[Tuple[float, float]] = None,
     draws: int = 10000,
     seed: int = 0,
-) -> Dict[str, Optional[float]]:
+) -> Dict[str, Any]:
     """Probability B wins for continuous metrics using Normal-Inverse-Gamma posterior."""
     np = lazy_import("numpy")
     rng = np.random.default_rng(seed)
