@@ -5,7 +5,6 @@ import logging
 from typing import Literal
 
 import pandas as pd
-import numpy as np
 
 from .types import DataSchema, MetricType
 

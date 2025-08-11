@@ -34,7 +34,8 @@ except Exception:  # pragma: no cover - allow running tests without PyQt
             "setEditable": lambda *a, **k: None,
         },
     )
-    pyqtSignal = lambda *a, **k: None
+    def pyqtSignal(*a, **k):  # type: ignore
+        return None
 
 from utils import segment_data
 

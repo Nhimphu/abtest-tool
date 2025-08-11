@@ -8,7 +8,12 @@ Idempotent fixer:
 Run:  poetry run python scripts/safe_repo_fix.py
 """
 from __future__ import annotations
-import os, sys, re, glob, stat, pathlib
+
+import glob
+import os
+import pathlib
+import re
+import stat
 
 def read(p): return pathlib.Path(p).read_text(encoding="utf-8")
 def write(p, s):
@@ -33,7 +38,8 @@ echo "i18n updated."
 
 def fix_pyproject():
     p = "pyproject.toml"
-    if not os.path.exists(p): return
+    if not os.path.exists(p):
+        return
     s = read(p)
     # python range
     s = re.sub(r'(?m)^(python\s*=\s*")[^"]+"', r'\1>=3.11,<3.13"', s)

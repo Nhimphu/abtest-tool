@@ -31,8 +31,6 @@ def main(cfg=config) -> None:
                 root.addHandler(h)
     else:  # pragma: no cover - fallback if yaml not available
         logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
     app = QApplication(sys.argv)
 
     translator = QTranslator()

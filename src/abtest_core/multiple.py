@@ -1,9 +1,6 @@
 """Multiple testing correction methods."""
 from __future__ import annotations
 
-import pandas as pd
-import numpy as np
-
 def holm(pvals: list[float]) -> list[float]:
     """Holm-Bonferroni step-down procedure.
 

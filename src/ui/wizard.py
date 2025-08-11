@@ -64,6 +64,9 @@ except Exception:  # pragma: no cover - allow tests without PyQt installed
     )
     QLabel = QComboBox = QLineEdit = QCheckBox = _Widget
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class QuickABTestWizard(QWizard):
     """Step-by-step wizard for configuring a quick A/B test."""
@@ -76,8 +79,8 @@ class QuickABTestWizard(QWizard):
             # input fields follow the selected theme
             self.setPalette(QApplication.palette())
             self.setStyleSheet(QApplication.instance().styleSheet())
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("wizard: non-critical UI setup skipped: %s", e)
         self.setWindowTitle(self.tr("Quick AB Test"))
 
         self.addPage(self._build_flags_page())
@@ -93,8 +96,8 @@ class QuickABTestWizard(QWizard):
             finish_const = getattr(QWizard, "FinishButton", 3)
         try:
             self.setButtonText(finish_const, self.tr("Start"))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("wizard: non-critical UI setup skipped: %s", e)
 
     def data(self) -> dict:
         """Return user selected options."""
@@ -132,8 +135,8 @@ class QuickABTestWizard(QWizard):
         QVBoxLayout(page)
         try:
             page.layout().setContentsMargins(0, 0, 0, 0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("wizard: non-critical UI setup skipped: %s", e)
 
         page.layout().addWidget(QLabel(self.tr("Feature Flag")))
         page.flag_combo = QComboBox()
@@ -152,8 +155,8 @@ class QuickABTestWizard(QWizard):
         QVBoxLayout(page)
         try:
             page.layout().setContentsMargins(0, 0, 0, 0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("wizard: non-critical UI setup skipped: %s", e)
 
         page.layout().addWidget(QLabel(self.tr("Primary metric")))
         page.primary_edit = QLineEdit()
@@ -171,8 +174,8 @@ class QuickABTestWizard(QWizard):
         QVBoxLayout(page)
         try:
             page.layout().setContentsMargins(0, 0, 0, 0)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("wizard: non-critical UI setup skipped: %s", e)
 
         page.seq_check = QCheckBox(self.tr("Sequential analysis"))
         page.layout().addWidget(page.seq_check)

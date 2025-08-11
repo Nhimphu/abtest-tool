@@ -1,9 +1,11 @@
 from __future__ import annotations
 
-import os
 import sqlite3
 from pathlib import Path
 from typing import Union
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def _get_db_path(conn: sqlite3.Connection) -> str:
@@ -11,9 +13,10 @@ def _get_db_path(conn: sqlite3.Connection) -> str:
         row = conn.execute("PRAGMA database_list").fetchone()
         if row:
             return row[2]
-    except Exception:
-        pass
-    return ""
+        return ""
+    except Exception as e:
+        logger.debug("migrations_runner: failed to read row[2]: %s", e)
+        return ""
 
 
 def run_migrations(db: Union[str, sqlite3.Connection]) -> None:
@@ -44,8 +47,11 @@ def run_migrations(db: Union[str, sqlite3.Connection]) -> None:
             if not isinstance(db, sqlite3.Connection):
                 conn.close()
             return
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(
+            "migrations_runner: nothing to migrate or DB not ready: %s", e
+        )
+        return
 
     # Fallback direct table creation
     cur = conn.cursor()

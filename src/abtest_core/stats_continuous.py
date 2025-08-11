@@ -1,10 +1,13 @@
 from __future__ import annotations
 
 import math
-from typing import Callable, Dict, Tuple
+from typing import TYPE_CHECKING, Any, Callable, Dict, Tuple
 
 from statistics import NormalDist
 from .utils import lazy_import
+
+if TYPE_CHECKING:
+    from numpy.typing import NDArray
 
 norm = NormalDist()
 
@@ -43,8 +46,8 @@ def welch_ttest(
 
 
 def yuen_trimmed_mean_test(
-    a: "np.ndarray",
-    b: "np.ndarray",
+    a: "NDArray[Any]",
+    b: "NDArray[Any]",
     trim: float = 0.2,
     alpha: float = 0.05,
     sided: str = "two",
@@ -96,9 +99,9 @@ def yuen_trimmed_mean_test(
 
 
 def bootstrap_bca_ci(
-    a: "np.ndarray",
-    b: "np.ndarray",
-    fn_effect: Callable[["np.ndarray", "np.ndarray"], float],
+    a: "NDArray[Any]",
+    b: "NDArray[Any]",
+    fn_effect: Callable[["NDArray[Any]", "NDArray[Any]"], float],
     alpha: float = 0.05,
     iters: int = 5000,
 ) -> Tuple[float, float]:

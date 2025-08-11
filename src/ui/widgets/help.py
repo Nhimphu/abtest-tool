@@ -30,6 +30,9 @@ except Exception:  # pragma: no cover - allow tests without PyQt installed
     def QCursor(*a, **k):
         return None
 
+import logging
+
+logger = logging.getLogger(__name__)
 
 class HelpIcon(QLabel):
     """Small '?' label that shows a tooltip."""
@@ -38,8 +41,8 @@ class HelpIcon(QLabel):
         super().__init__('?', parent)
         try:
             self.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("help widget: cursor/tooltips setup failed: %s", e)
         self.setToolTip(self.tr(text))
 
 

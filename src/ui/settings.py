@@ -37,11 +37,15 @@ except Exception:  # pragma: no cover - allow running tests without PyQt install
         },
     )
     QToolTip = type("QToolTip", (), {"showText": lambda *a, **k: None})
-    pyqtSignal = lambda *a, **k: lambda *args, **kwargs: None
+    def pyqtSignal(*a, **k):  # type: ignore
+        def _sig(*args, **kwargs):
+            return None
+        return _sig
 
 import json
 import urllib.request
 
+from utils.net import urlopen_checked
 from utils.safe_eval import validate_expression
 
 
@@ -98,7 +102,7 @@ class SettingsWidget(QWidget):
                 headers={"Content-Type": "application/json"},
             )
             try:
-                with urllib.request.urlopen(req, timeout=5) as resp:
+                with urlopen_checked(req, timeout=5) as resp:
                     body = resp.read().decode(errors="ignore")
                     msg = f"Webhook response {resp.status}: {body}"
             except Exception as e:

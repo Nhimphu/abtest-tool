@@ -31,7 +31,7 @@ def create_app() -> Flask:
     if not jwt_secret:
         raise RuntimeError("JWT_SECRET_KEY environment variable is required")
     app.config["JWT_SECRET_KEY"] = jwt_secret
-    jwt = JWTManager(app)
+    JWTManager(app)
 
     swaggerui_blueprint = get_swaggerui_blueprint(
         "/docs",

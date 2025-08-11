@@ -5,6 +5,8 @@ from __future__ import annotations
 import os
 from typing import Any, Dict, List, Type
 
+import plugin_loader
+
 try:  # UI message boxes are optional
     from PyQt6.QtWidgets import QMessageBox
 except Exception:  # pragma: no cover - optional dependency
@@ -27,8 +29,6 @@ def _missing_class(name: str) -> Type:
 
     return MissingConnector
 
-
-import plugin_loader
 
 # Ensure plugins are loaded before accessing the registry
 plugin_loader.load_plugins()
