@@ -1,7 +1,7 @@
 """Optional heavy export helpers using external libraries."""
 from typing import Any, Dict, Iterable, Set
 
-from abtest_tool.backends import get_backend
+from abtest_core.backends import get_backend
 
 ABI_VERSION = "1.0"
 name = "export"

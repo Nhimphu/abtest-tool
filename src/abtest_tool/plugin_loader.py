@@ -1,99 +1,68 @@
-"""Discovery and loading of optional plugins."""
+"""Minimal plugin loader for local or entry-point based plugins."""
 from __future__ import annotations
 
 import importlib
 import logging
-from importlib import metadata
+import sys
 from pathlib import Path
 from types import ModuleType
-from typing import Dict, Iterator, Iterable
 
-from .plugins import PluginBase
+log = logging.getLogger(__name__)
 
-logger = logging.getLogger(__name__)
+LOCAL_PLUGIN_DIR: Path = Path("plugins")
+LOCAL_PLUGIN_PACKAGE = "plugins"
 
-ENTRY_POINT = "abtest_tool.plugins"
-LOCAL_PLUGIN_DIR = Path(__file__).resolve().parent.parent.parent / "plugins"
+_DISCOVERED: dict[str, str] = {}
+_LOADED: dict[str, ModuleType] = {}
 
-_DISCOVERED: Dict[str, str] = {}
-_LOADED: Dict[str, ModuleType] = {}
-
-
-def _discover() -> None:
-    if _DISCOVERED:
-        return
-    # Local plugins directory
-    if LOCAL_PLUGIN_DIR.is_dir():
-        for path in LOCAL_PLUGIN_DIR.glob("*.py"):
-            if path.name.startswith("_"):
-                continue
-            name = path.stem
-            _DISCOVERED[name] = f"plugins.{name}"
-    # Entry point plugins
-    try:
-        eps: Iterable[metadata.EntryPoint] = metadata.entry_points().select(group=ENTRY_POINT)
-    except Exception:  # pragma: no cover - metadata failure
-        eps = ()
-    for ep in eps:
-        _DISCOVERED[ep.name] = ep.value
-
-
-def _import(name: str, module: str) -> ModuleType | None:
-    try:
-        mod = importlib.import_module(module)
-    except Exception as exc:  # pragma: no cover - plugin import may fail
-        logger.warning("Failed to import plugin %s: %s", module, exc)
-        return None
-    abi = getattr(mod, "ABI_VERSION", None)
-    if abi != PluginBase.ABI_VERSION:
-        logger.warning(
-            "Skipping plugin %s due to ABI mismatch (%s != %s)",
-            module,
-            abi,
-            PluginBase.ABI_VERSION,
-        )
-        return None
-    return mod
-
-
-def load_plugin(name: str) -> ModuleType | None:
-    """Load plugin by ``name`` if available."""
-    _discover()
-    if name in _LOADED:
-        return _LOADED[name]
-    module = _DISCOVERED.get(name)
-    if not module:
-        return None
-    mod = _import(name, module)
-    if mod:
-        _LOADED[name] = mod
-    return mod
-
-
-def iter_plugins() -> Iterator[ModuleType]:
-    """Iterate over all available plugins, importing them lazily."""
-    _discover()
-    for name in list(_DISCOVERED):
-        mod = load_plugin(name)
-        if mod:
-            yield mod
+ABI_VERSION = "1.0"
 
 
 def load_plugins() -> None:
-    """Import all available plugins."""
-    for _ in iter_plugins():
-        pass
+    """Discover and import all available plugins."""
+
+    _DISCOVERED.clear()
+    _LOADED.clear()
+    if LOCAL_PLUGIN_DIR and LOCAL_PLUGIN_DIR.is_dir():
+        parent = LOCAL_PLUGIN_DIR.resolve().parent
+        if str(parent) not in sys.path:
+            sys.path.insert(0, str(parent))
+        importlib.invalidate_caches()
+        for p in LOCAL_PLUGIN_DIR.glob("*.py"):
+            name = p.stem
+            if name.startswith("_"):
+                continue
+            import_name = f"{LOCAL_PLUGIN_PACKAGE}.{name}"
+            _DISCOVERED[name] = import_name
+            try:
+                mod = importlib.import_module(import_name)
+            except Exception as e:  # pragma: no cover - plugin import may fail
+                log.warning("Failed to import plugin %s: %s", import_name, e)
+                continue
+            plugin_abi = getattr(mod, "ABI_VERSION", None)
+            if plugin_abi is not None and plugin_abi != ABI_VERSION:
+                log.warning(
+                    "Skip plugin %s due to ABI mismatch (%s != %s)",
+                    import_name,
+                    plugin_abi,
+                    ABI_VERSION,
+                )
+                continue
+            _LOADED[name] = mod
 
 
 def get_plugin(name: str) -> ModuleType | None:
     """Return loaded plugin module by ``name``."""
+
     return _LOADED.get(name)
 
 
 __all__ = [
     "load_plugins",
-    "iter_plugins",
     "get_plugin",
-    "load_plugin",
     "LOCAL_PLUGIN_DIR",
+    "_DISCOVERED",
+    "_LOADED",
+    "ABI_VERSION",
 ]
+

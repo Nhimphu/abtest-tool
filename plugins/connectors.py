@@ -7,7 +7,7 @@ particular connector is used.
 
 from typing import Any, Dict, List, Set
 
-from abtest_tool.backends import get_backend
+from abtest_core.backends import get_backend
 from utils.connectors import register_connector
 
 ABI_VERSION = "1.0"

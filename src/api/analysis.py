@@ -11,7 +11,7 @@ from flask_jwt_extended import (
     jwt_required,
 )
 from flask_swagger_ui import get_swaggerui_blueprint
-from abtest_tool.backends import get_backend
+from abtest_core.backends import get_backend
 from abtest_core.srm import SrmCheckFailed
 from abtest_core import AnalysisConfig, analyze_groups
 from prometheus_client import (

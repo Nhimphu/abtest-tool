@@ -6,14 +6,13 @@ if TYPE_CHECKING:
     import pandas as pd
     import plotly.graph_objects as go
 
-try:
-    from abtest_tool.backends import get_backend
-except Exception:  # fallback for relative layout, do not fail on import at edit-time
-    from .backends import get_backend  # noqa: F401
+from abtest_core.backends import get_backend
 
 
 def plot_cumulative_conversion(data: "pd.DataFrame") -> "go.Figure":
     """Return cumulative conversion curve by group using Plotly."""
+    pd = get_backend("pandas")
+    go = get_backend("plotly.graph_objects")
     required = {"date", "group", "conversion"}
     missing = required - set(data.columns)
     if missing:
@@ -21,9 +20,6 @@ def plot_cumulative_conversion(data: "pd.DataFrame") -> "go.Figure":
 
     if len(data) < 100:
         raise ValueError("Недостаточно данных для построения графика (минимум 100 строк)")
-
-    pd = get_backend("pandas")
-    go = get_backend("plotly.graph_objects")
 
     df = data.copy()
     df = df.sort_values("date")

@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
 
-from abtest_tool.backends import get_backend
+from abtest_core.backends import get_backend
 
 if TYPE_CHECKING:
     import pandas as pd
