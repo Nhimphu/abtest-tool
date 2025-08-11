@@ -1,10 +1,12 @@
 from __future__ import annotations
 
-import numpy as np
 from typing import Sequence, Optional, Dict
 
+import pandas as pd
+import numpy as np
 
-def apply_cuped(post: Sequence[float], pre: Sequence[float], theta: float) -> np.ndarray:
+
+def apply_cuped(post: Sequence[float], pre: Sequence[float], theta: float) -> "np.ndarray":
     """Return CUPED-adjusted post metrics."""
     post_arr = np.asarray(post, dtype=float)
     pre_arr = np.asarray(pre, dtype=float)

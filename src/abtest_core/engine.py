@@ -1,9 +1,10 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Tuple, Optional
 
-import numpy as np
 import pandas as pd
-assert pd.__file__, "pandas not installed"
+import numpy as np
 
 from .types import AnalysisConfig
 from .multiple import holm, benjamini_yekutieli
@@ -25,7 +26,7 @@ class AnalysisResult:
     segments: Optional[list[dict]] = None
 
 
-def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
+def analyze_groups(df: "pd.DataFrame", config: AnalysisConfig) -> AnalysisResult:
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
     groups = list(pd.unique(df["group"]))

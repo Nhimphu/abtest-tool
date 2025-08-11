@@ -3,17 +3,7 @@ from __future__ import annotations
 
 from typing import Dict
 
-try:
-    from scipy.stats import chi2
-except Exception:  # pragma: no cover - fallback when scipy unavailable
-    import math as _math
-
-    class _Chi2:
-        @staticmethod
-        def cdf(x: float, df: int) -> float:
-            return 1 - _math.exp(-x / 2)
-
-    chi2 = _Chi2()  # type: ignore
+from .utils import lazy_import
 
 
 class SrmCheckFailed(Exception):
@@ -59,6 +49,17 @@ def srm_check(counts: Dict[str, int], alpha: float = 0.001) -> dict:
     expected = {g: expected_count for g in counts}
     observed = {g: int(v) for g, v in counts.items()}
     chi_sq = sum((observed[g] - expected[g]) ** 2 / expected[g] for g in counts)
+    try:
+        chi2 = lazy_import("scipy.stats").chi2
+    except Exception:  # pragma: no cover - scipy missing
+        import math as _math
+
+        class _Chi2:
+            @staticmethod
+            def cdf(x: float, df: int) -> float:
+                return 1 - _math.exp(-x / 2)
+
+        chi2 = _Chi2()
     p_value = 1 - chi2.cdf(chi_sq, df=k - 1)
     passed = p_value >= alpha
     return {

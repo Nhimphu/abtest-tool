@@ -3,10 +3,7 @@
 from typing import Any, Dict, List
 import re
 
-try:  # Optional dependency used for query filtering
-    import pandas as pd  # type: ignore
-except Exception:  # pragma: no cover - allow running without pandas
-    pd = None  # type: ignore
+from abtest_core.utils import lazy_import
 
 try:
     from PyQt6.QtWidgets import (
@@ -39,7 +36,6 @@ except Exception:  # pragma: no cover - allow running tests without PyQt
     )
     pyqtSignal = lambda *a, **k: None
 
-from stats.ab_test import evaluate_abn_test
 from utils import segment_data
 
 
@@ -53,6 +49,10 @@ class FiltersPanel(QWidget):
     ) -> None:
         super().__init__(parent)
         self._records = records
+        try:  # Optional dependency used for query filtering
+            pd = lazy_import("pandas")
+        except Exception:  # pragma: no cover - allow running without pandas
+            pd = None  # type: ignore
 
         self.device_combo = QComboBox()
         self.country_combo = QComboBox()
@@ -174,6 +174,8 @@ class FiltersPanel(QWidget):
             self.metrics_updated.emit(stats)  # type: ignore
 
     def _calc_metrics(self, subset: List[Dict[str, Any]]) -> Dict[str, Any]:
+        stats_mod = lazy_import("stats.ab_test")
+        evaluate_abn_test = stats_mod.evaluate_abn_test
         group_a = [r for r in subset if r.get("group") == "A"]
         group_b = [r for r in subset if r.get("group") == "B"]
         users_a = len(group_a)

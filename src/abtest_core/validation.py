@@ -5,6 +5,7 @@ import logging
 from typing import Literal
 
 import pandas as pd
+import numpy as np
 
 from .types import DataSchema, MetricType
 
@@ -31,10 +32,10 @@ class ValidationError(Exception):
 
 
 def validate_dataframe(
-    df: pd.DataFrame,
+    df: "pd.DataFrame",
     schema: DataSchema,
     nan_policy: Literal["drop", "zero", "error"] = "drop",
-) -> pd.DataFrame:
+) -> "pd.DataFrame":
     """Validate dataframe structure and handle missing values.
 
     Returns the validated (and possibly modified) dataframe.
@@ -88,7 +89,6 @@ def validate_dataframe(
 
 def infer_metric_type(df: pd.DataFrame, metric_col: str) -> MetricType:
     """Infer metric type from column values."""
-
     unique = set(df[metric_col].dropna().unique())
     if unique.issubset({0, 1}):
         return "binomial"

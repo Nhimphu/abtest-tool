@@ -3,7 +3,16 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import BaseModel
+try:  # pragma: no cover - allow running without pydantic
+    from pydantic import BaseModel
+except Exception:  # pragma: no cover - minimal stub
+    class BaseModel:  # type: ignore
+        def __init__(self, **data):
+            for k, v in data.items():
+                setattr(self, k, v)
+
+        def dict(self) -> dict:
+            return self.__dict__.copy()
 
 MetricType = Literal["binomial", "continuous", "ratio"]
 

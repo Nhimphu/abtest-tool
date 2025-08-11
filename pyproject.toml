@@ -14,7 +14,11 @@ exclude = [
     "examples/**",
     "build/**",
     "dist/**",
-    "src/pd_stub/**"
+    "src/pd_stub/**",
+    "src/_pd_shadow_removed/**",
+    "src/_np_shadow_removed/**",
+    "src/pandas/**",
+    "src/numpy/**"
 ]
 include = [
     { path = "translations/**", format = "wheel" },
