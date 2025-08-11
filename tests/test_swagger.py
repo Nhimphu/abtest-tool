@@ -10,6 +10,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from api.analysis import create_app as create_analysis_app
 from api.flags import create_app as create_flags_app
 
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
+
 
 def test_analysis_docs_available():
     app = create_analysis_app()

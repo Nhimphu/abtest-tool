@@ -22,9 +22,7 @@ class SrmCheckFailed(Exception):
                 "observed": self.result["observed"],
                 "p_value": self.result["p_value"],
             },
-            "actions": {
-                "force_run_when_srm_failed": True,
-            },
+            "fix_hint": "Проверьте распределение трафика или запустите с force_run_when_srm_failed",
         }
 
 

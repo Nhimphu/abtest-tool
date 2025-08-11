@@ -22,7 +22,10 @@ from metrics import track_time
 
 def create_app() -> Flask:
     app = Flask(__name__)
-    app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "secret")
+    jwt_secret = os.getenv("JWT_SECRET_KEY")
+    if not jwt_secret:
+        raise RuntimeError("JWT_SECRET_KEY environment variable is required")
+    app.config["JWT_SECRET_KEY"] = jwt_secret
     jwt = JWTManager(app)
     registry = CollectorRegistry()
 
@@ -74,7 +77,17 @@ def create_app() -> Flask:
             access = create_access_token(identity="admin")
             refresh = create_refresh_token(identity="admin")
             return jsonify(access_token=access, refresh_token=refresh)
-        return jsonify({"msg": "Bad credentials"}), 401
+        return (
+            jsonify(
+                {
+                    "code": "auth_failed",
+                    "title": "Bad credentials",
+                    "details": "Invalid username or password",
+                    "fix_hint": "Verify provided credentials",
+                }
+            ),
+            401,
+        )
 
     @app.post("/refresh")
     @jwt_required(refresh=True)

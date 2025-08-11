@@ -1,0 +1,6 @@
+{
+  "flags_db": "flags.db",
+  "history_db": "history.db",
+  "webhook_url": "https://example.com/webhook",
+  "theme": "dark"
+}
