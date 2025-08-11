@@ -12,9 +12,19 @@ jobs:
       - uses: actions/setup-python@v4
         with:
           python-version: "3.12"
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/poetry.lock') }}
       - uses: snok/install-poetry@v1
       - name: Install deps
         run: poetry install --no-interaction --with dev --sync
+      - name: Lint
+        run: poetry run ruff check .
+      - name: Type check
+        run: poetry run mypy src
+      - name: Security check
+        run: poetry run bandit -q -r src
       - name: Run unit tests
         run: |
           poetry run coverage run -m pytest -q --ignore=tests/test_api_integration.py
