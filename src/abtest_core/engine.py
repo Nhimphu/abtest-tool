@@ -3,6 +3,7 @@ from typing import Tuple, Optional
 
 import numpy as np
 import pandas as pd
+assert pd.__file__, "pandas not installed"
 
 from .types import AnalysisConfig
 from .multiple import holm, benjamini_yekutieli
