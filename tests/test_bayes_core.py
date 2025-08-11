@@ -8,9 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 
 # stub pandas if missing
 if 'pandas' not in sys.modules:
-    pd_mod = types.ModuleType('pandas')
-    pd_mod.DataFrame = type('DataFrame', (), {})
-    sys.modules['pandas'] = pd_mod
+    import pandas  # type: ignore
 
 try:  # provide minimal numpy if real package missing
     import numpy as np  # type: ignore

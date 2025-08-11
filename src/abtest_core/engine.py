@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, List, Optional, Tuple, cast
+from typing import TYPE_CHECKING, Any, List, Optional, Tuple, cast
 
-import pandas as pd
-import numpy as np
+from abtest_core.backends import get_backend
+
+if TYPE_CHECKING:
+    import pandas as pd
 
 from .types import AnalysisConfig
 from .multiple import holm, benjamini_yekutieli
@@ -27,6 +29,8 @@ class AnalysisResult:
 
 
 def analyze_groups(df: "pd.DataFrame", config: AnalysisConfig) -> AnalysisResult:
+    pd = get_backend("pandas")
+    np = get_backend("numpy")
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
     groups = list(pd.unique(df["group"]))

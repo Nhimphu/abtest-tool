@@ -11,7 +11,7 @@ from flask_jwt_extended import (
     jwt_required,
 )
 from flask_swagger_ui import get_swaggerui_blueprint
-import pandas as pd
+from abtest_core.backends import get_backend
 from abtest_core.srm import SrmCheckFailed
 from abtest_core import AnalysisConfig, analyze_groups
 from prometheus_client import (
@@ -106,6 +106,7 @@ def create_app() -> Flask:
     @track_time
     def run_abtest():
         data = request.get_json(force=True)
+        pd = get_backend("pandas")
 
         # Optional dataframe validation if raw rows are provided
         if "rows" in data and "schema" in data:

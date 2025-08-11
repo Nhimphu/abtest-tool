@@ -83,33 +83,32 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 100
+
+[tool.ruff.lint]
 extend-select = ["E", "F"]
 ignore = ["E501"]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint.per-file-ignores]
 "tests/**" = ["E402", "E401", "F401", "F841", "E731"]
 
 [tool.mypy]
 python_version = "3.12"
+strict = true
 ignore_missing_imports = true
 follow_imports = "skip"
 warn_unused_ignores = false
 disallow_untyped_defs = false
 check_untyped_defs = false
 no_implicit_optional = true
-exclude = '(^tests/|^src/ui/|^src/plots/|^src/stats/|^src/bandit/|^src/utils/|^plugins/|^src/cli.py|^src/main.py|^src/migrations_runner.py)'
+disallow_incomplete_defs = false
+disallow_untyped_calls = false
+disallow_any_generics = false
+disallow_subclassing_any = false
+warn_return_any = false
+no_implicit_reexport = false
+strict_equality = false
+exclude = '(^tests/|^src/ui/|^src/plots/|^src/stats/|^src/bandit/|^src/utils/|^plugins/|^src/cli.py|^src/main.py|^src/migrations\n_runner.py)'
 
-["mypy-PySide6.*"]
-ignore_missing_imports = true
-["mypy-PyQt6.*"]
-ignore_missing_imports = true
-["mypy-plotly.*"]
-ignore_missing_imports = true
-["mypy-matplotlib.*"]
-ignore_missing_imports = true
-["mypy-scipy.*"]
-ignore_missing_imports = true
-["mypy-pandas.*"]
-ignore_missing_imports = true
-["mypy-yaml.*"]
+[[tool.mypy.overrides]]
+module = ["plotly.*", "pandas", "PySide6.*", "PyQt6.*", "matplotlib.*", "scipy.*", "yaml.*"]
 ignore_missing_imports = true

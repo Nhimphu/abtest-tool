@@ -35,7 +35,28 @@ class Series(list):
         return list(self)
 
     def notna(self) -> list[bool]:
-        return [x is not None for x in self]
+        return Series([x is not None for x in self])
+
+    def isna(self) -> "Series":
+        return Series([x is None for x in self])
+
+    def dropna(self) -> "Series":
+        return Series([x for x in self if x is not None])
+
+    def unique(self) -> list[Any]:
+        return unique(self)
+
+    def fillna(self, value: Any) -> "Series":
+        return Series([value if x is None else x for x in self])
+
+    def all(self) -> bool:
+        return all(self)
+
+    def __and__(self, other: Iterable[Any]):
+        return Series([bool(a) and bool(b) for a, b in zip(self, other)])
+
+    def any(self) -> bool:
+        return any(self)
 
 
 class _Loc:
@@ -49,8 +70,11 @@ class _Loc:
 
 
 class DataFrame:
-    def __init__(self, data: dict[str, Iterable[Any]]):
-        self._data = {k: list(v) for k, v in data.items()}
+    def __init__(self, data: dict[str, Iterable[Any]] | "DataFrame"):
+        if isinstance(data, DataFrame):
+            self._data = {k: list(v) for k, v in data._data.items()}
+        else:
+            self._data = {k: list(v) for k, v in data.items()}
         self.loc = _Loc(self)
 
     @property
@@ -65,6 +89,21 @@ class DataFrame:
             return 0
         return len(next(iter(self._data.values())))
 
+    def copy(self) -> "DataFrame":
+        return DataFrame(self._data)
+
+    def drop(self, columns: Iterable[str]) -> "DataFrame":
+        return DataFrame({k: v for k, v in self._data.items() if k not in set(columns)})
+
+    def dropna(self, subset: Iterable[str]) -> "DataFrame":
+        cols = list(subset)
+        mask = [all(self._data[c][i] is not None for c in cols) for i in range(len(self))]
+        return DataFrame({k: [v for v, m in zip(col, mask) if m] for k, col in self._data.items()})
+
+    def sort_values(self, col: str) -> "DataFrame":
+        order = sorted(range(len(self._data[col])), key=lambda i: self._data[col][i])
+        return DataFrame({k: [col[i] for i in order] for k, col in self._data.items()})
+
     def groupby(self, col: str) -> Iterator[Tuple[Any, "DataFrame"]]:
         groups: dict[Any, list[int]] = {}
         values = self._data[col]
@@ -73,3 +112,16 @@ class DataFrame:
         for val, idxs in groups.items():
             subset = {k: [self._data[k][i] for i in idxs] for k in self._data}
             yield val, DataFrame(subset)
+
+
+class _Types:
+    @staticmethod
+    def is_datetime64_any_dtype(_):
+        return True
+
+
+class _API:
+    types = _Types()
+
+
+api = _API()

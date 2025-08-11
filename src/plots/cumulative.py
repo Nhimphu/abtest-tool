@@ -1,15 +1,18 @@
 from __future__ import annotations
 
-try:
-    import pandas as pd  # type: ignore
-except Exception as e:  # pragma: no cover - optional dependency
-    raise ImportError("pandas is required for cumulative plots") from e
+from typing import TYPE_CHECKING
 
-import plotly.graph_objects as go
+if TYPE_CHECKING:
+    import pandas as pd
+    import plotly.graph_objects as go
+
+from abtest_core.backends import get_backend
 
 
-def plot_cumulative_conversion(data: pd.DataFrame) -> go.Figure:
+def plot_cumulative_conversion(data: "pd.DataFrame") -> "go.Figure":
     """Return cumulative conversion curve by group using Plotly."""
+    pd = get_backend("pandas")
+    go = get_backend("plotly.graph_objects")
     required = {"date", "group", "conversion"}
     missing = required - set(data.columns)
     if missing:
@@ -30,7 +33,6 @@ def plot_cumulative_conversion(data: pd.DataFrame) -> go.Figure:
     df["conv_cum"] = df.groupby("group")["conversion"].cumsum()
     df["obs_cum"] = df.groupby("group").cumcount() + 1
     df["cr"] = df["conv_cum"] / df["obs_cum"]
-
     fig = go.Figure()
     for grp, gdf in df.groupby("group"):
         fig.add_trace(
