@@ -18,7 +18,7 @@ except Exception:  # pragma: no cover - minimal beta pdf/cdf
         np = lazy_import("numpy")
         xs = np.linspace(0.0, x, n)
         ys = _beta_pdf_scalar(xs, a, b)
-        return float(np.trapz(ys, xs))
+        return float(np.trapezoid(ys, xs))
 
     class _Beta:
         @staticmethod
@@ -90,13 +90,13 @@ def prob_win_binomial(
     xs = np.linspace(0.0, 1.0, grid)
     f1 = beta_dist.pdf(xs, a1, b1)
     cdf2 = beta_dist.cdf(xs, a2, b2)
-    p_win = float(np.trapz(f1 * (1 - cdf2), xs))
+    p_win = float(np.trapezoid(f1 * (1 - cdf2), xs))
     p_rope: Optional[float] = None
     if rope is not None:
         lo, hi = rope
         hi_cdf = beta_dist.cdf(np.clip(xs + hi, 0.0, 1.0), a2, b2)
         lo_cdf = beta_dist.cdf(np.clip(xs + lo, 0.0, 1.0), a2, b2)
-        p_rope = float(np.trapz(f1 * (hi_cdf - lo_cdf), xs))
+        p_rope = float(np.trapezoid(f1 * (hi_cdf - lo_cdf), xs))
     return {"p_win": p_win, "p_rope": p_rope, "rope": rope}
 
 

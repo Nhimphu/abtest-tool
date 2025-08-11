@@ -4,7 +4,8 @@ from __future__ import annotations
 import logging
 from typing import Literal
 
-from .utils import lazy_import
+import pandas as pd
+import numpy as np
 
 from .types import DataSchema, MetricType
 
@@ -40,7 +41,6 @@ def validate_dataframe(
     Returns the validated (and possibly modified) dataframe.
     """
 
-    pd = lazy_import("pandas")
     required = [schema.group_col, schema.metric_col]
     if schema.user_id:
         required.append(schema.user_id)
@@ -89,7 +89,6 @@ def validate_dataframe(
 
 def infer_metric_type(df: pd.DataFrame, metric_col: str) -> MetricType:
     """Infer metric type from column values."""
-    pd = lazy_import("pandas")
     unique = set(df[metric_col].dropna().unique())
     if unique.issubset({0, 1}):
         return "binomial"

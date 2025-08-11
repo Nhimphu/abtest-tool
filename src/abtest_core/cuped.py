@@ -2,12 +2,12 @@ from __future__ import annotations
 
 from typing import Sequence, Optional, Dict
 
-from .utils import lazy_import
+import pandas as pd
+import numpy as np
 
 
 def apply_cuped(post: Sequence[float], pre: Sequence[float], theta: float) -> "np.ndarray":
     """Return CUPED-adjusted post metrics."""
-    np = lazy_import("numpy")
     post_arr = np.asarray(post, dtype=float)
     pre_arr = np.asarray(pre, dtype=float)
     return post_arr - theta * pre_arr
@@ -25,7 +25,6 @@ def estimate_theta(
     stability. The function returns a dictionary with the estimated theta and
     the percentage of variance reduction after applying CUPED.
     """
-    np = lazy_import("numpy")
     pre_arr = np.asarray(pre, dtype=float)
     post_arr = np.asarray(post, dtype=float)
     cov_matrix = np.cov(pre_arr, post_arr, ddof=1)

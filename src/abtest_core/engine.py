@@ -3,7 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Tuple, Optional
 
-from .utils import lazy_import
+import pandas as pd
+import numpy as np
 
 from .types import AnalysisConfig
 from .multiple import holm, benjamini_yekutieli
@@ -26,8 +27,6 @@ class AnalysisResult:
 
 
 def analyze_groups(df: "pd.DataFrame", config: AnalysisConfig) -> AnalysisResult:
-    pd = lazy_import("pandas")
-    np = lazy_import("numpy")
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
     groups = list(pd.unique(df["group"]))
