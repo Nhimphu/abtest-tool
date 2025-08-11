@@ -9,7 +9,6 @@ packages = [
     { include = "api", from = "src" },
     { include = "bandit", from = "src" },
     { include = "plots", from = "src" },
-    { include = "pydantic", from = "src" },
     { include = "stats", from = "src" },
     { include = "ui", from = "src" },
     { include = "utils", from = "src" },
@@ -19,8 +18,7 @@ exclude = [
     "tests/**",
     "docs/**",
     "scripts/**",
-    ".github/**",
-    "src/pd_stub/**"
+    ".github/**"
 ]
 include = [
     { path = "translations/**", format = "wheel" },
@@ -48,6 +46,7 @@ Flask-JWT-Extended = "4.6.0"
 prometheus-client = "0.20.0"
 SQLAlchemy = "2.0.30"
 alembic = "1.13.1"
+pydantic = "1.10.9"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "8.1.1"
