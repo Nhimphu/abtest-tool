@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import math
 from typing import Dict, Tuple
 
-import numpy as np
 from statistics import NormalDist
+from .utils import lazy_import
 
 norm = NormalDist()
 
@@ -52,6 +54,7 @@ def ratio_test(
     sided: str = "two",
     fieller: bool = False,
 ) -> Dict[str, object]:
+    np = lazy_import("numpy")
     ratio = mean2 / mean1
     if not np.isscalar(ratio):
         ratio = float(ratio)

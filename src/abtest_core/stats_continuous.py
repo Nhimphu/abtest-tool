@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import math
 from typing import Callable, Dict, Tuple
 
-import numpy as np
 from statistics import NormalDist
+from .utils import lazy_import
 
 norm = NormalDist()
 
@@ -41,12 +43,13 @@ def welch_ttest(
 
 
 def yuen_trimmed_mean_test(
-    a: np.ndarray,
-    b: np.ndarray,
+    a: "np.ndarray",
+    b: "np.ndarray",
     trim: float = 0.2,
     alpha: float = 0.05,
     sided: str = "two",
 ) -> Dict[str, object]:
+    np = lazy_import("numpy")
     a = np.asarray(a)
     b = np.asarray(b)
     g1 = int(trim * len(a))
@@ -93,12 +96,13 @@ def yuen_trimmed_mean_test(
 
 
 def bootstrap_bca_ci(
-    a: np.ndarray,
-    b: np.ndarray,
-    fn_effect: Callable[[np.ndarray, np.ndarray], float],
+    a: "np.ndarray",
+    b: "np.ndarray",
+    fn_effect: Callable[["np.ndarray", "np.ndarray"], float],
     alpha: float = 0.05,
     iters: int = 5000,
 ) -> Tuple[float, float]:
+    np = lazy_import("numpy")
     a = np.asarray(a)
     b = np.asarray(b)
     obs = fn_effect(a, b)

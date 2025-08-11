@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import math
 from typing import Dict, Optional, Tuple
 
-import numpy as np
+from .utils import lazy_import
 
 try:  # pragma: no cover - fallback when scipy not available
     from scipy.stats import beta as beta_dist
@@ -13,6 +15,7 @@ except Exception:  # pragma: no cover - minimal beta pdf/cdf
     def _beta_cdf_scalar(x: float, a: float, b: float, n: int = 1000) -> float:
         if x <= 0.0:
             return 0.0
+        np = lazy_import("numpy")
         xs = np.linspace(0.0, x, n)
         ys = _beta_pdf_scalar(xs, a, b)
         return float(np.trapz(ys, xs))
@@ -20,11 +23,13 @@ except Exception:  # pragma: no cover - minimal beta pdf/cdf
     class _Beta:
         @staticmethod
         def pdf(x, a, b):
+            np = lazy_import("numpy")
             x_arr = np.asarray(x)
             return np.vectorize(lambda v: _beta_pdf_scalar(float(v), a, b))(x_arr)
 
         @staticmethod
         def cdf(x, a, b):
+            np = lazy_import("numpy")
             x_arr = np.asarray(x)
             return np.vectorize(lambda v: _beta_cdf_scalar(float(v), a, b))(x_arr)
 
@@ -46,9 +51,10 @@ def normal_inv_gamma_post(
     k0: float,
     alpha0: float,
     beta0: float,
-    data: np.ndarray,
+    data: "np.ndarray",
 ) -> Dict[str, float]:
     """Posterior parameters of Normal-Inverse-Gamma prior given data."""
+    np = lazy_import("numpy")
     data = np.asarray(data, dtype=float)
     n = data.size
     if n == 0:
@@ -78,6 +84,7 @@ def prob_win_binomial(
     grid: int = 2000,
 ) -> Dict[str, Optional[float]]:
     """Probability B wins for binomial metrics with optional ROPE."""
+    np = lazy_import("numpy")
     a1, b1 = beta_post(a0, b0, x1, n1)
     a2, b2 = beta_post(a0, b0, x2, n2)
     xs = np.linspace(0.0, 1.0, grid)
@@ -95,18 +102,20 @@ def prob_win_binomial(
 
 def _sample_mean_from_post(post: Dict[str, float], rng: np.random.Generator, size: int) -> np.ndarray:
     alpha, beta, k, mu = post["alpha"], post["beta"], post["k"], post["mu"]
+    np = lazy_import("numpy")
     sigma2 = beta / rng.gamma(alpha, 1.0, size=size)
     return rng.normal(mu, np.sqrt(sigma2 / k), size=size)
 
 
 def prob_win_continuous(
-    a: np.ndarray,
-    b: np.ndarray,
+    a: "np.ndarray",
+    b: "np.ndarray",
     rope: Optional[Tuple[float, float]] = None,
     draws: int = 10000,
     seed: int = 0,
 ) -> Dict[str, Optional[float]]:
     """Probability B wins for continuous metrics using Normal-Inverse-Gamma posterior."""
+    np = lazy_import("numpy")
     rng = np.random.default_rng(seed)
     prior = {"mu": 0.0, "k": 1e-6, "alpha": 1e-6, "beta": 1e-6}
     post_a = normal_inv_gamma_post(prior["mu"], prior["k"], prior["alpha"], prior["beta"], np.asarray(a, dtype=float))

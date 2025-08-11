@@ -13,6 +13,7 @@ from typing import Dict
 import json
 import urllib.request
 
+from abtest_core.utils import lazy_import
 from PyQt6.QtWidgets import (
     QApplication,
     QMainWindow,
@@ -101,27 +102,6 @@ try:  # Optional dependency
 except Exception:  # pragma: no cover - optional
     QWebEngineView = None
 
-from stats.ab_test import (
-    required_sample_size,
-    calculate_mde,
-    evaluate_abn_test,
-    bayesian_analysis,
-    run_aa_simulation,
-    run_sequential_analysis,
-    run_obrien_fleming,
-    calculate_roi,
-    cuped_adjustment,
-)
-from abtest_core.srm import srm_check
-import plugin_loader
-from plots import (
-    plot_bayesian_posterior,
-    plot_confidence_intervals,
-    plot_power_curve,
-    plot_bootstrap_distribution,
-    plot_alpha_spending,
-    save_plot,
-)
 import utils
 from pathlib import Path
 
@@ -700,6 +680,7 @@ class ABTestWindow(QMainWindow):
         self.bayes_button.clicked.connect(self._on_bayes)
         self.bayes_button.setToolTip(self.tr("Run Bayesian analysis"))
         self.bayes_button.setStatusTip(self.tr("Run Bayesian analysis"))
+        import plugin_loader
         if not plugin_loader.get_plugin("bayesian"):
             self.bayes_button.setEnabled(False)
             self.bayes_button.setToolTip(self.tr("Bayesian plugin not available"))
@@ -1261,6 +1242,9 @@ class ABTestWindow(QMainWindow):
 
     def calculate_sample_size(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            required_sample_size = stats_mod.required_sample_size
+            calculate_mde = stats_mod.calculate_mde
             p1 = self.baseline_slider.value() / 1000
             uplift = self.uplift_slider.value() / 1000
             alpha = self.alpha_slider.value() / 100
@@ -1281,6 +1265,10 @@ class ABTestWindow(QMainWindow):
 
     def _on_analyze(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            evaluate_abn_test = stats_mod.evaluate_abn_test
+            cuped_adjustment = stats_mod.cuped_adjustment
+            srm_check = lazy_import("abtest_core.srm").srm_check
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             uc, cc = int(self.users_C_var.text()), int(self.conv_C_var.text())
@@ -1350,6 +1338,7 @@ class ABTestWindow(QMainWindow):
 
     def _on_plot_confidence_intervals(self):
         try:
+            from plots import plot_confidence_intervals
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             alpha = self.alpha_slider.value() / 100
@@ -1362,6 +1351,7 @@ class ABTestWindow(QMainWindow):
 
     def _on_plot_power_curve(self):
         try:
+            from plots import plot_power_curve
             p1 = self.baseline_slider.value() / 1000
             alpha = self.alpha_slider.value() / 100
             pw = self.power_slider.value() / 100
@@ -1374,6 +1364,7 @@ class ABTestWindow(QMainWindow):
 
     def _on_plot_alpha_spending(self):
         try:
+            from plots import plot_alpha_spending
             alpha = self.alpha_slider.value() / 100
             fig = plot_alpha_spending(alpha, looks=5)
             self._last_fig = fig
@@ -1391,6 +1382,7 @@ class ABTestWindow(QMainWindow):
 
     def _on_plot_bootstrap_distribution(self):
         try:
+            from plots import plot_bootstrap_distribution
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             fig = plot_bootstrap_distribution(ua, ca, ub, cb)
@@ -1402,6 +1394,9 @@ class ABTestWindow(QMainWindow):
 
     def _on_bayes(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            bayesian_analysis = stats_mod.bayesian_analysis
+            from plots import plot_bayesian_posterior
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             a0 = self.prior_alpha_spin.value()
@@ -1424,6 +1419,8 @@ class ABTestWindow(QMainWindow):
 
     def _on_run_aa(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            run_aa_simulation = stats_mod.run_aa_simulation
             p = self.baseline_slider.value() / 1000
             n = int(self.users_A_var.text()) + int(self.users_B_var.text())
             alpha = self.alpha_slider.value() / 100
@@ -1440,6 +1437,8 @@ class ABTestWindow(QMainWindow):
 
     def _on_run_sequential(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            run_sequential_analysis = stats_mod.run_sequential_analysis
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             alpha = self.alpha_slider.value() / 100
@@ -1457,6 +1456,8 @@ class ABTestWindow(QMainWindow):
 
     def _on_run_obrien_fleming(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            run_obrien_fleming = stats_mod.run_obrien_fleming
             ua, ca = int(self.users_A_var.text()), int(self.conv_A_var.text())
             ub, cb = int(self.users_B_var.text()), int(self.conv_B_var.text())
             alpha = self.alpha_slider.value() / 100
@@ -1478,6 +1479,8 @@ class ABTestWindow(QMainWindow):
 
     def _on_calculate_roi(self):
         try:
+            stats_mod = lazy_import("stats.ab_test")
+            calculate_roi = stats_mod.calculate_roi
             rpu = float(self.revenue_per_user_var.text())
             cost = float(self.traffic_cost_var.text())
             bud = float(self.budget_var.text())

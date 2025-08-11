@@ -1,9 +1,9 @@
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import Tuple, Optional
 
-import numpy as np
-import pandas as pd
-assert pd.__file__, "pandas not installed"
+from .utils import lazy_import
 
 from .types import AnalysisConfig
 from .multiple import holm, benjamini_yekutieli
@@ -25,7 +25,9 @@ class AnalysisResult:
     segments: Optional[list[dict]] = None
 
 
-def analyze_groups(df: pd.DataFrame, config: AnalysisConfig) -> AnalysisResult:
+def analyze_groups(df: "pd.DataFrame", config: AnalysisConfig) -> AnalysisResult:
+    pd = lazy_import("pandas")
+    np = lazy_import("numpy")
     if not isinstance(df, pd.DataFrame):
         df = pd.DataFrame(df)
     groups = list(pd.unique(df["group"]))
