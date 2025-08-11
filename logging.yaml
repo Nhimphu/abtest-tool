@@ -3,12 +3,22 @@ disable_existing_loggers: False
 formatters:
   simple:
     format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+filters:
+  redact_pii:
+    (): utils.log_filters.RedactPIIFilter
 handlers:
   console:
     class: logging.StreamHandler
     level: INFO
     formatter: simple
+    filters: [redact_pii]
     stream: ext://sys.stdout
+  file:
+    class: logging.FileHandler
+    level: DEBUG
+    formatter: simple
+    filters: [redact_pii]
+    filename: debug.log
 root:
-  level: INFO
-  handlers: [console]
+  level: DEBUG
+  handlers: [console, file]

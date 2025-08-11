@@ -9,6 +9,8 @@ pytest.importorskip("flask_jwt_extended")
 
 from api.flags import create_app as create_flags_app
 
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
+
 
 def test_login_and_protected_endpoint():
     app = create_flags_app()

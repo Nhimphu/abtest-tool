@@ -11,6 +11,8 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'src'))
 from api.flags import create_app as create_flags_app
 from api.analysis import create_app as create_analysis_app
 
+os.environ.setdefault("JWT_SECRET_KEY", "test-secret")
+
 
 @pytest.fixture
 def flags_client(tmp_path):
