@@ -1,29 +1,165 @@
-# ui_mainwindow.py
+try:
+    from PySide6.QtWidgets import (
+        QApplication,
+        QMainWindow,
+        QWidget,
+        QVBoxLayout,
+        QHBoxLayout,
+        QGridLayout,
+        QLabel,
+        QLineEdit,
+        QPushButton,
+        QSlider,
+        QDoubleSpinBox,
+        QTabWidget,
+        QTableWidget,
+        QTableWidgetItem,
+        QProgressBar,
+        QMessageBox,
+        QFileDialog,
+        QTextBrowser,
+        QComboBox,
+        QGroupBox,
+    )
+    from PySide6.QtGui import (
+        QPalette,
+        QColor,
+        QIntValidator,
+        QDoubleValidator,
+        QAction,
+    )
+    from PySide6.QtCore import Qt
+    try:
+        from PySide6.QtWebEngineWidgets import QWebEngineView
+    except Exception:
+        QWebEngineView = None  # optional
+except Exception:
+    from PyQt6.QtWidgets import (
+        QApplication,
+        QMainWindow,
+        QWidget,
+        QVBoxLayout,
+        QHBoxLayout,
+        QGridLayout,
+        QLabel,
+        QLineEdit,
+        QPushButton,
+        QSlider,
+        QDoubleSpinBox,
+        QTabWidget,
+        QTableWidget,
+        QTableWidgetItem,
+        QProgressBar,
+        QMessageBox,
+        QFileDialog,
+        QTextBrowser,
+        QComboBox,
+        QGroupBox,
+    )
+    from PyQt6.QtGui import (
+        QPalette,
+        QColor,
+        QIntValidator,
+        QDoubleValidator,
+        QAction,
+    )
+    from PyQt6.QtCore import Qt
+    try:
+        from PyQt6.QtWebEngineWidgets import QWebEngineView
+    except Exception:
+        QWebEngineView = None
 
-import sys
+try:
+    from PySide6.QtWidgets import QStatusBar
+except Exception:
+    try:
+        from PyQt6.QtWidgets import QStatusBar
+    except Exception:  # pragma: no cover - optional
+        class QStatusBar:  # type: ignore
+            def __init__(self, *a, **k):
+                pass
+
+            def showMessage(self, *a, **k):
+                pass
+
+            def clearMessage(self):
+                pass
+
+try:
+    from PySide6.QtGui import QIcon
+except Exception:
+    try:
+        from PyQt6.QtGui import QIcon
+    except Exception:  # pragma: no cover - optional
+        class QIcon:  # type: ignore
+            def __init__(self, *a, **k):
+                pass
+
+try:
+    from PySide6.QtCore import QEvent, QDir, QTranslator, QLocale
+except Exception:
+    try:
+        from PyQt6.QtCore import QEvent, QDir, QTranslator, QLocale
+    except Exception:  # pragma: no cover - optional
+        class QEvent:  # type: ignore
+            class Type:
+                FocusIn = 0
+                FocusOut = 1
+
+        class QDir:  # type: ignore
+            @staticmethod
+            def addSearchPath(*a, **k):
+                pass
+
+        class QTranslator:  # type: ignore
+            def load(self, *a, **k):
+                return False
+
+        class QLocale:  # type: ignore
+            @staticmethod
+            def system():
+                return type("QLocale", (), {"name": lambda: "en_US"})()
+
+try:
+    from PySide6.QtCore import Signal as pyqtSignal, Slot as pyqtSlot
+except Exception:
+    try:
+        from PyQt6.QtCore import pyqtSignal, pyqtSlot
+    except Exception:  # pragma: no cover - optional
+        def pyqtSignal(*a, **k):  # type: ignore
+            def _sig(*args, **kw):
+                return None
+            return _sig
+
+        def pyqtSlot(*a, **k):  # type: ignore
+            def _slot(func):
+                return func
+            return _slot
+
+from .widgets import with_help_label
+from .login import LoginDialog
+import utils
+from pathlib import Path
+from migrations_runner import run_migrations
+import logging
 import sqlite3
 import os
-import logging
-
+import sys
 from datetime import datetime
-
-from migrations_runner import run_migrations
 import csv
 from typing import Dict
 import json
 import urllib.request
-
 from abtest_core.utils import lazy_import
 
 try:
-    from plugins.bayesian import bayesian_analysis  # re-export for tests
-except Exception:  # pragma: no cover - plugin optional
+    from plugins.bayesian import bayesian_analysis  # for tests monkeypatch
+except Exception:
     def bayesian_analysis(*a, **k):
         raise NotImplementedError("bayesian_analysis unavailable")
-
 try:
-    from abtest_core.srm import srm_check  # re-export for tests
-except Exception:  # pragma: no cover - core optional
+    from abtest_core.srm import srm_check  # for tests monkeypatch
+except Exception:
     def srm_check(*a, **k):
         return {"p_value": 1.0, "passed": True, "expected": {}, "observed": {}}
 
@@ -34,96 +170,6 @@ def plot_bayesian_posterior(*a, **k):  # re-export for tests
     except Exception as exc:  # pragma: no cover - plugin optional
         raise NotImplementedError("plot_bayesian_posterior unavailable") from exc
     return _plot(*a, **k)
-from PyQt6.QtWidgets import (
-    QApplication,
-    QMainWindow,
-    QWidget,
-    QVBoxLayout,
-    QHBoxLayout,
-    QGridLayout,
-    QLabel,
-    QLineEdit,
-    QPushButton,
-    QSlider,
-    QDoubleSpinBox,
-    QTabWidget,
-    QTableWidget,
-    QTableWidgetItem,
-    QProgressBar,
-    QMessageBox,
-    QFileDialog,
-    QTextBrowser,
-    QComboBox,
-    QGroupBox,
-)
-from PyQt6.QtGui import (
-    QPalette,
-    QColor,
-    QIntValidator,
-    QDoubleValidator,
-    QAction,
-)
-
-try:
-    from PyQt6.QtGui import QIcon
-except Exception:  # pragma: no cover - optional
-
-    class QIcon:
-        def __init__(self, *a, **k):
-            pass
-
-
-try:
-    from PyQt6.QtCore import Qt, QEvent, QDir, QTranslator, QLocale
-except Exception:  # pragma: no cover - optional
-    from PyQt6.QtCore import Qt  # type: ignore
-
-    class QEvent:
-        class Type:
-            FocusIn = 0
-            FocusOut = 1
-
-    class QDir:
-        @staticmethod
-        def addSearchPath(*a, **k):
-            pass
-
-    class QTranslator:
-        def load(self, *a, **k):
-            return False
-
-    class QLocale:
-        @staticmethod
-        def system():
-            return type("QLocale", (), {"name": lambda: "en_US"})()
-
-
-from .widgets import with_help_label
-
-from .login import LoginDialog
-
-try:
-    from PyQt6.QtWidgets import QStatusBar
-except Exception:  # pragma: no cover - optional
-
-    class QStatusBar:
-        def __init__(self, *a, **k):
-            pass
-
-        def showMessage(self, *a, **k):
-            pass
-
-        def clearMessage(self):
-            pass
-
-
-try:  # Optional dependency
-    from PyQt6.QtWebEngineWidgets import QWebEngineView  # type: ignore
-except Exception:  # pragma: no cover - optional
-    QWebEngineView = None
-
-import utils
-from pathlib import Path
 
 # Register path prefix for icons used via the Qt resource scheme
 QDir.addSearchPath("resources", str(Path(__file__).resolve().parent / "resources"))

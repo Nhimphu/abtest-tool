@@ -1,7 +1,7 @@
 """Entry point for launching the GUI application."""
 
 # Ensure optional plugins are loaded on startup
-import plugin_loader
+import plugin_loader  # noqa: F401
 
 from ui.main import main
 from utils.config import config

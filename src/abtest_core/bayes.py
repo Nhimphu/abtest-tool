@@ -1,9 +1,13 @@
 from __future__ import annotations
 
-import math
-from typing import Dict, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple
 
 from .utils import lazy_import
+import math
+
+if TYPE_CHECKING:
+    import numpy as np
+    from numpy.typing import NDArray
 
 try:  # pragma: no cover - fallback when scipy not available
     from scipy.stats import beta as beta_dist
@@ -51,7 +55,7 @@ def normal_inv_gamma_post(
     k0: float,
     alpha0: float,
     beta0: float,
-    data: "np.ndarray",
+    data: "NDArray[Any]",
 ) -> Dict[str, float]:
     """Posterior parameters of Normal-Inverse-Gamma prior given data."""
     np = lazy_import("numpy")
@@ -100,7 +104,9 @@ def prob_win_binomial(
     return {"p_win": p_win, "p_rope": p_rope, "rope": rope}
 
 
-def _sample_mean_from_post(post: Dict[str, float], rng: np.random.Generator, size: int) -> np.ndarray:
+def _sample_mean_from_post(
+    post: Dict[str, float], rng: "np.random.Generator", size: int
+) -> "NDArray[Any]":
     alpha, beta, k, mu = post["alpha"], post["beta"], post["k"], post["mu"]
     np = lazy_import("numpy")
     sigma2 = beta / rng.gamma(alpha, 1.0, size=size)
@@ -108,8 +114,8 @@ def _sample_mean_from_post(post: Dict[str, float], rng: np.random.Generator, siz
 
 
 def prob_win_continuous(
-    a: "np.ndarray",
-    b: "np.ndarray",
+    a: "NDArray[Any]",
+    b: "NDArray[Any]",
     rope: Optional[Tuple[float, float]] = None,
     draws: int = 10000,
     seed: int = 0,

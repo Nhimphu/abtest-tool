@@ -70,7 +70,10 @@ except Exception:  # pragma: no cover - allow running tests without PyQt
         "QDateTime", (), {"currentDateTime": staticmethod(lambda: DummyDt())}
     )
     Qt = type("Qt", (), {"ItemDataRole": type("IDR", (), {"UserRole": 0})})
-    pyqtSignal = lambda *a, **k: lambda *args, **kw: None
+    def pyqtSignal(*a, **k):  # type: ignore
+        def _sig(*args, **kw):
+            return None
+        return _sig
 
 
 class HistoryPanel(QWidget):

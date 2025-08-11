@@ -37,7 +37,10 @@ except Exception:  # pragma: no cover - allow running tests without PyQt install
         },
     )
     QToolTip = type("QToolTip", (), {"showText": lambda *a, **k: None})
-    pyqtSignal = lambda *a, **k: lambda *args, **kwargs: None
+    def pyqtSignal(*a, **k):  # type: ignore
+        def _sig(*args, **kwargs):
+            return None
+        return _sig
 
 import json
 import urllib.request
