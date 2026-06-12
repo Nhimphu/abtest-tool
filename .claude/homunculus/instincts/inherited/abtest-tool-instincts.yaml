@@ -1,0 +1,651 @@
+# Instincts generated from https://github.com/Nhimphu/abtest-tool
+# Generated: 2026-06-12T11:11:02.249Z
+# Version: 2.0
+# NOTE: This file supplements (does not replace) any existing curated instincts.
+# High-confidence manually curated instincts should be preserved alongside these.
+
+---
+id: abtest-tool-commit-length
+trigger: "when writing a commit message"
+confidence: 0.6
+domain: git
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Commit Length
+
+## Action
+
+Write moderate-length commit messages (~55 characters)
+
+## Evidence
+
+- Average commit message length: 55 chars
+- Based on 200 commits
+
+---
+id: abtest-tool-naming-files
+trigger: "when creating a new file"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Naming Files
+
+## Action
+
+Use snake_case naming convention
+
+## Evidence
+
+- Analyzed file naming patterns in repository
+- Dominant pattern: snake_case
+
+---
+id: abtest-tool-import-relative
+trigger: "when importing modules"
+confidence: 0.75
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Import Relative
+
+## Action
+
+Use relative imports for project files
+
+## Evidence
+
+- Import analysis shows relative import pattern
+- Example: import { x } from '../lib/x'
+
+---
+id: abtest-tool-export-style
+trigger: "when exporting from a module"
+confidence: 0.7
+domain: code-style
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Export Style
+
+## Action
+
+Prefer named exports
+
+## Evidence
+
+- Export pattern analysis
+- Dominant style: named
+
+---
+id: abtest-tool-arch-type-based
+trigger: "when adding new code"
+confidence: 0.8
+domain: architecture
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Arch Type Based
+
+## Action
+
+Place code in the appropriate type folder (components/, services/, utils/, etc.)
+
+## Evidence
+
+- Type-based module organization detected
+- Folders: abtest_core, api, bandit, plots, stats
+
+---
+id: abtest-tool-test-separate
+trigger: "when writing tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Test Separate
+
+## Action
+
+Place tests in the tests/ or __tests__/ directory, mirroring src structure
+
+## Evidence
+
+- Separate test directory pattern detected
+- Tests live in dedicated test folders
+
+---
+id: abtest-tool-test-naming
+trigger: "when creating a test file"
+confidence: 0.85
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Test Naming
+
+## Action
+
+Name test files using the pattern: *.test.ts
+
+## Evidence
+
+- File pattern: *.test.ts
+- Consistent across test files
+
+---
+id: abtest-tool-test-types
+trigger: "when planning tests for a feature"
+confidence: 0.7
+domain: testing
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Test Types
+
+## Action
+
+Write unit, integration tests to match project standards
+
+## Evidence
+
+- Test types detected: unit, integration
+- Coverage config: yes
+
+---
+id: abtest-tool-workflow-database-migration
+trigger: "when modifying the database schema or adding tables"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Database Migration
+
+## Action
+
+Follow the database-migration workflow:
+1. Create migration file
+2. Update schema definitions
+3. Generate/update types
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: migrations/*
+
+---
+id: abtest-tool-workflow-feature-development
+trigger: "when implementing a new feature"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Feature Development
+
+## Action
+
+Follow the feature-development workflow:
+1. Add feature implementation
+2. Add tests for feature
+3. Update documentation
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~11x per month
+- Files: **/*.test.*, **/api/**
+
+---
+id: abtest-tool-workflow-add-core-analysis-feature-with-tests
+trigger: "when doing add core analysis feature with tests"
+confidence: 0.7
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Add Core Analysis Feature With Tests
+
+## Action
+
+Follow the add-core-analysis-feature-with-tests workflow:
+1. Create or update a module in src/abtest_core (e.g., bayes.py, multiple.py, sequential.py, cuped.py, stats_binomial.py, stats_continuous.py, stats_ratio.py)
+2. Update src/abtest_core/engine.py to integrate the new method
+3. Update src/abtest_core/types.py if new types or results are needed
+4. Add or update a test file in tests/ (e.g., tests/test_bayes_core.py, tests/test_multiple.py, tests/test_sequential.py, tests/test_cuped.py, tests/test_stats_binomial.py, etc.)
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~4x per month
+- Files: src/abtest_core/engine.py, src/abtest_core/types.py, src/abtest_core/*.py
+
+---
+id: abtest-tool-workflow-add-or-update-pyproject-toml-for-packaging-or-tooling
+trigger: "when doing add or update pyproject toml for packaging or tooling"
+confidence: 0.65
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Add Or Update Pyproject Toml For Packaging Or Tooling
+
+## Action
+
+Follow the add-or-update-pyproject-toml-for-packaging-or-tooling workflow:
+1. Edit pyproject.toml to update packages, resources, or dev tools
+2. Optionally, add/remove __init__.py stubs or adjust src/ structure
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~3x per month
+- Files: pyproject.toml
+
+---
+id: abtest-tool-workflow-ci-workflow-update
+trigger: "when doing ci workflow update"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Ci Workflow Update
+
+## Action
+
+Follow the ci-workflow-update workflow:
+1. Edit .github/workflows/*.yml files (ci.yml, docs.yml, publish.yml, release.yml)
+2. Optionally, update pyproject.toml or scripts used in CI
+3. Commit changes to workflow and config files
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: .github/workflows/ci.yml, .github/workflows/docs.yml, .github/workflows/publish.yml
+
+---
+id: abtest-tool-workflow-implement-feature-with-test-and-ui-integration
+trigger: "when doing implement feature with test and ui integration"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Implement Feature With Test And Ui Integration
+
+## Action
+
+Follow the implement-feature-with-test-and-ui-integration workflow:
+1. Add or update logic in src/abtest_core/*.py and/or src/api/*.py
+2. Update src/ui/ui_mainwindow.py or other UI modules for integration
+3. Update or add tests in tests/ (e.g., test_logic.py, test_ui_exports.py, etc.)
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: src/abtest_core/*.py, src/api/*.py, src/ui/ui_mainwindow.py
+
+---
+id: abtest-tool-workflow-refactor-or-cleanup-core-and-ui
+trigger: "when doing refactor or cleanup core and ui"
+confidence: 0.6
+domain: workflow
+source: repo-analysis
+source_repo: https://github.com/Nhimphu/abtest-tool
+---
+
+# Abtest Tool Workflow Refactor Or Cleanup Core And Ui
+
+## Action
+
+Follow the refactor-or-cleanup-core-and-ui workflow:
+1. Edit multiple files in src/abtest_core, src/ui, and/or tests to clean up code or fix imports/types
+2. Update pyproject.toml or config files if needed
+3. Remove or rename obsolete modules
+
+## Evidence
+
+- Workflow detected from commit patterns
+- Frequency: ~2x per month
+- Files: src/abtest_core/*.py, src/ui/*.py, tests/*.py
+
+---
+id: abtest-tool-naming-files-snake-case
+trigger: "When creating or renaming a file"
+confidence: 0.9
+domain: code-style
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Naming Files Snake Case
+
+## Action
+
+Use snake_case for file names
+
+## Evidence
+
+- Pattern in namingConventions.files: snake_case
+- Files in src/ and tests/ follow snake_case
+
+---
+id: abtest-tool-naming-functions-camel-case
+trigger: "When defining a function"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Naming Functions Camel Case
+
+## Action
+
+Use camelCase for function names
+
+## Evidence
+
+- Pattern in namingConventions.functions: camelCase
+
+---
+id: abtest-tool-naming-classes-pascal-case
+trigger: "When defining a class"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Naming Classes Pascal Case
+
+## Action
+
+Use PascalCase for class names
+
+## Evidence
+
+- Pattern in namingConventions.classes: PascalCase
+
+---
+id: abtest-tool-naming-constants-screaming-snake
+trigger: "When defining a constant"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Naming Constants Screaming Snake
+
+## Action
+
+Use SCREAMING_SNAKE_CASE for constants
+
+## Evidence
+
+- Pattern in namingConventions.constants: SCREAMING_SNAKE_CASE
+
+---
+id: abtest-tool-imports-relative
+trigger: "When importing modules within the package"
+confidence: 0.85
+domain: code-style
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Imports Relative
+
+## Action
+
+Use relative imports
+
+## Evidence
+
+- importStyle: relative
+- Seen in src/abtest_core/*.py
+
+---
+id: abtest-tool-exports-named
+trigger: "When exporting functions or classes from a module"
+confidence: 0.8
+domain: code-style
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Exports Named
+
+## Action
+
+Use named exports (explicit __all__ or direct exports)
+
+## Evidence
+
+- exportStyle: named
+- Pattern in abtest_core/__init__.py
+
+---
+id: abtest-tool-test-file-pattern
+trigger: "When creating a test file"
+confidence: 0.9
+domain: testing
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Test File Pattern
+
+## Action
+
+Name test files as tests/test_*.py
+
+## Evidence
+
+- Pattern in testing.filePattern: *.test.ts (adapted for Python: test_*.py)
+- Examples: tests/test_bayes_core.py
+
+---
+id: abtest-tool-test-types
+trigger: "When adding tests for a feature or module"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Test Types
+
+## Action
+
+Include both unit and integration tests where applicable
+
+## Evidence
+
+- testing.testTypes: unit, integration
+- Examples: tests/test_bayes_core.py, tests/test_stats_binomial.py
+
+---
+id: abtest-tool-test-coverage-config
+trigger: "When configuring or running tests"
+confidence: 0.8
+domain: testing
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Test Coverage Config
+
+## Action
+
+Ensure test coverage is configured and measured
+
+## Evidence
+
+- testing.coverageConfig: true
+- Presence of coverage config in CI workflows
+
+---
+id: abtest-tool-commit-prefix
+trigger: "When writing a commit message"
+confidence: 0.9
+domain: git
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Commit Prefix
+
+## Action
+
+Prefix commit messages with chore, fix, feat, perf, docs, or ci as appropriate
+
+## Evidence
+
+- commits.prefixes: chore, fix, feat
+- Examples: 'chore: remove duplicate future import', 'fix(core,ui): stop pandas shadowing'
+
+---
+id: abtest-tool-commit-length
+trigger: "When composing a commit message"
+confidence: 0.7
+domain: git
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Commit Length
+
+## Action
+
+Keep commit messages concise (average ~55 characters)
+
+## Evidence
+
+- commits.averageLength: 55
+- Examples: 'feat(stats): add SRM precheck with UI gating and explicit override'
+
+---
+id: abtest-tool-add-core-analysis-feature
+trigger: "When adding a new statistical analysis method to the core engine"
+confidence: 0.95
+domain: workflow
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Add Core Analysis Feature
+
+## Action
+
+Create or update a module in src/abtest_core, integrate it in engine.py, update types.py if needed, and add/update corresponding tests in tests/
+
+## Evidence
+
+- Workflow: add-core-analysis-feature-with-tests
+- Example commits and files: src/abtest_core/engine.py, tests/test_bayes_core.py
+
+---
+id: abtest-tool-update-pyproject-toml
+trigger: "When updating packaging, dependencies, or dev tooling"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Update Pyproject Toml
+
+## Action
+
+Edit pyproject.toml and optionally adjust __init__.py stubs or src/ structure
+
+## Evidence
+
+- Workflow: add-or-update-pyproject-toml-for-packaging-or-tooling
+- Example commits: Edit pyproject.toml
+
+---
+id: abtest-tool-update-ci-workflows
+trigger: "When improving or fixing CI/CD pipelines"
+confidence: 0.9
+domain: workflow
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Update Ci Workflows
+
+## Action
+
+Edit .github/workflows/*.yml files, optionally update pyproject.toml or scripts, and commit changes
+
+## Evidence
+
+- Workflow: ci-workflow-update
+- Example commits: Edit .github/workflows/ci.yml, scripts/*.py
+
+---
+id: abtest-tool-feature-with-ui-integration
+trigger: "When adding a user-facing feature that requires changes across core, API, and UI"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Feature With Ui Integration
+
+## Action
+
+Update logic in abtest_core and/or api, update UI modules, and add/update tests
+
+## Evidence
+
+- Workflow: implement-feature-with-test-and-ui-integration
+- Example files: src/abtest_core/*.py, src/ui/ui_mainwindow.py, tests/test_logic.py
+
+---
+id: abtest-tool-refactor-cleanup
+trigger: "When improving code quality, removing unused code, or fixing import/type issues"
+confidence: 0.85
+domain: workflow
+source: repo-analysis
+source_repo: Nhimphu/abtest-tool
+---
+
+# Abtest Tool Refactor Cleanup
+
+## Action
+
+Edit multiple files in abtest_core, ui, and/or tests to clean up code or fix imports/types, update config files if needed, remove obsolete modules
+
+## Evidence
+
+- Workflow: refactor-or-cleanup-core-and-ui
+- Example: 'chore: remove duplicate future import', files in src/abtest_core/*.py
+
